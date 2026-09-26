@@ -6,7 +6,7 @@ import { Contestant, Player, ScoringEvent } from "@/types/survivor";
 import { useLeagueTeams } from "@/hooks/useLeagueTeams";
 import { TeamAvatar } from "./TeamAvatar";
 import { ContestantAvatar } from "./ContestantAvatar";
-import { Crown, Skull, Trophy } from "lucide-react";
+import { Crown, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -66,7 +66,7 @@ export function WinnerTakesAllMode({
   const handleCrownWinner = async (contestant: Contestant) => {
     if (!sessionId) return;
     const confirmed = confirm(
-      `👑 Crown ${contestant.name} as the Sole Survivor?\n\nThis will complete the season. ${contestant.owner} wins!`
+      `Crown ${contestant.name} as the Sole Survivor?\n\nThis will complete the season. ${contestant.owner} wins!`
     );
     if (!confirmed) return;
 
@@ -86,7 +86,7 @@ export function WinnerTakesAllMode({
       .update({ status: "completed" } as any)
       .eq("id", sessionId);
 
-    toast.success(`🏆 ${contestant.owner} wins with ${contestant.name}!`);
+    toast.success(`${contestant.owner} wins with ${contestant.name}!`);
   };
 
   // Celebration state
@@ -98,25 +98,25 @@ export function WinnerTakesAllMode({
           <h1 className="font-display text-5xl md:text-6xl leading-none text-primary">
             Sole Survivor
           </h1>
-          <Card className="glass-strong p-8 max-w-md mx-auto space-y-4">
+          <Card className="p-8 max-w-md mx-auto space-y-4 bg-success text-success-foreground">
+            <Badge className="gap-1 border-plank bg-warning text-warning-foreground hover:bg-warning label-caps">
+              <Trophy className="h-3.5 w-3.5" />
+              Winner
+            </Badge>
             <ContestantAvatar
               name={winnerContestant.name}
               imageUrl={winnerContestant.imageUrl}
               size="md"
               className="mx-auto !h-24 !w-24 !text-3xl"
             />
-            <h2 className="text-3xl font-bold">{winnerContestant.name}</h2>
+            <h2 className="font-display text-4xl leading-[0.95] break-words">{winnerContestant.name}</h2>
             <div className="flex items-center justify-center gap-2">
               <TeamAvatar
                 teamName={String(winnerContestant.owner)}
                 avatarUrl={teamAvatarMap[winnerContestant.owner || ""] || null}
                 size="sm"
               />
-              <span className="text-xl font-semibold">{winnerContestant.owner}</span>
-              <Badge className="bg-accent/20 text-accent border-accent/30">
-                <Trophy className="h-3 w-3 mr-1" />
-                WINNER
-              </Badge>
+              <span className="text-xl font-extrabold">{winnerContestant.owner}</span>
             </div>
           </Card>
 
@@ -129,7 +129,7 @@ export function WinnerTakesAllMode({
               return (
                 <Card
                   key={player}
-                  className={`glass p-4 ${hasWinner ? "ring-2 ring-accent" : "opacity-60"}`}
+                  className={`p-4 text-left ${hasWinner ? "border-accent bg-warning/20" : "opacity-60"}`}
                 >
                   <div className="flex items-center gap-3">
                     <TeamAvatar
@@ -138,8 +138,8 @@ export function WinnerTakesAllMode({
                       size="md"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold truncate">{player}</p>
-                      <div className="space-y-1">
+                      <p className="font-display text-2xl leading-none truncate">{player}</p>
+                      <div className="mt-2 space-y-1.5">
                         {picks.map(pick => (
                           <div key={pick.id} className="flex items-center gap-2">
                             <ContestantAvatar
@@ -151,12 +151,17 @@ export function WinnerTakesAllMode({
                             <span className={`text-sm ${pick.isEliminated ? "line-through text-muted-foreground" : ""}`}>
                               {pick.name}
                             </span>
-                            {pick.id === winnerContestant.id && <Trophy className="h-3 w-3 text-accent" />}
+                            {pick.id === winnerContestant.id && (
+                              <span className="inline-flex items-center gap-1 rounded-full border-2 border-plank bg-warning px-2 py-0.5 text-[11px] font-extrabold text-warning-foreground">
+                                <Trophy className="h-3 w-3" />
+                                Winner
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
                     </div>
-                    {hasWinner && <Trophy className="h-5 w-5 text-accent" />}
+                    {hasWinner && <Trophy className="h-5 w-5 shrink-0 text-accent" />}
                   </div>
                 </Card>
               );
@@ -174,7 +179,8 @@ export function WinnerTakesAllMode({
           Winner takes all
         </h1>
         <p className="text-muted-foreground">
-          {remainingContestants.length} of {draftedContestants.length} picks still alive
+          <span className="font-black tabular text-foreground">{remainingContestants.length}</span> of{" "}
+          <span className="tabular">{draftedContestants.length}</span> picks still alive
         </p>
       </div>
 
@@ -188,7 +194,7 @@ export function WinnerTakesAllMode({
           return (
             <Card
               key={player}
-              className={`glass p-4 transition-all ${allEliminated ? "opacity-50" : ""}`}
+              className={`p-4 ${allEliminated ? "opacity-60" : ""}`}
             >
               <div className="flex items-center gap-3">
                 <TeamAvatar
@@ -198,8 +204,8 @@ export function WinnerTakesAllMode({
                   className="shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold truncate">{player}</p>
-                  <div className="space-y-1 mt-1">
+                  <p className="font-display text-2xl leading-none truncate">{player}</p>
+                  <div className="space-y-1.5 mt-2">
                     {picks.map(pick => (
                       <div key={pick.id} className="flex items-center gap-2">
                         <ContestantAvatar
@@ -208,15 +214,17 @@ export function WinnerTakesAllMode({
                           size="sm"
                           isEliminated={pick.isEliminated}
                         />
-                        <span className={`text-sm ${pick.isEliminated ? "line-through text-muted-foreground" : "font-medium"}`}>
+                        <span className={`min-w-0 truncate text-sm ${pick.isEliminated ? "line-through text-muted-foreground" : "font-semibold"}`}>
                           {pick.name}
                         </span>
                         {pick.isEliminated ? (
-                          <Skull className="h-4 w-4 text-destructive shrink-0" />
+                          <span className="shrink-0 rounded-full bg-destructive px-2 py-0.5 text-[11px] font-extrabold text-destructive-foreground">
+                            Out
+                          </span>
                         ) : (
-                          <Badge variant="outline" className="text-success border-success/30 text-xs shrink-0">
-                            Alive
-                          </Badge>
+                          <span className="shrink-0 rounded-full bg-success px-2 py-0.5 text-[11px] font-extrabold text-success-foreground">
+                            Still in
+                          </span>
                         )}
                       </div>
                     ))}
@@ -225,14 +233,14 @@ export function WinnerTakesAllMode({
               </div>
 
               {isAdmin && (
-                <div className="mt-3 space-y-2">
+                <div className="mt-4 space-y-2 border-t-2 border-border pt-3">
                   {picks.map(pick => (
-                    <div key={pick.id} className="flex gap-2">
-                      <span className="text-xs text-muted-foreground self-center truncate min-w-0 flex-shrink">{pick.name}</span>
+                    <div key={pick.id} className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-muted-foreground truncate min-w-0 flex-shrink">{pick.name}</span>
                       <Button
                         size="sm"
                         variant={pick.isEliminated ? "outline" : "destructive"}
-                        className="flex-1"
+                        className="h-11 flex-1 text-sm"
                         onClick={() => handleToggleElimination(pick)}
                       >
                         {pick.isEliminated ? "Undo" : "Eliminate"}
@@ -240,8 +248,8 @@ export function WinnerTakesAllMode({
                       {!pick.isEliminated && remainingContestants.length <= 2 && (
                         <Button
                           size="sm"
-                          variant="accent"
-                          className="gap-1"
+                          variant="outline"
+                          className="h-11 bg-warning text-sm text-warning-foreground hover:bg-warning/90"
                           onClick={() => handleCrownWinner(pick)}
                         >
                           <Crown className="h-4 w-4" />

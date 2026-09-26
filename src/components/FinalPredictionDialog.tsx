@@ -94,7 +94,7 @@ export const FinalPredictionDialog = ({
     
     if (!playerToSubmit || !selectedWinner) {
       toast({
-        title: "Missing Information",
+        title: "Missing information",
         description: "Please select both a player and their prediction",
         variant: "destructive",
       });
@@ -121,7 +121,7 @@ export const FinalPredictionDialog = ({
     
     if (existingData) {
       toast({
-        title: "Already Submitted",
+        title: "Already submitted",
         description: `${playerToSubmit} has already submitted a prediction`,
         variant: "destructive",
       });
@@ -145,7 +145,7 @@ export const FinalPredictionDialog = ({
     }
 
     toast({
-      title: "Prediction Submitted",
+      title: "Prediction submitted",
       description: `${playerToSubmit}'s prediction has been recorded`,
     });
 
@@ -157,7 +157,7 @@ export const FinalPredictionDialog = ({
   const revealAndScore = async () => {
     if (predictions.length === 0) {
       toast({
-        title: "No Predictions",
+        title: "No predictions",
         description: "No predictions have been submitted yet",
         variant: "destructive",
       });
@@ -181,7 +181,7 @@ export const FinalPredictionDialog = ({
     }
 
     toast({
-      title: "Predictions Revealed",
+      title: "Predictions revealed",
       description: "Now select who actually got voted out to award points",
     });
     
@@ -191,7 +191,7 @@ export const FinalPredictionDialog = ({
   const confirmVoteOut = async () => {
     if (!actualVoteOut) {
       toast({
-        title: "Missing Information",
+        title: "Missing information",
         description: "Please select who actually got voted out",
         variant: "destructive",
       });
@@ -203,7 +203,7 @@ export const FinalPredictionDialog = ({
     
     if (uniquePredictions.size === 1) {
       toast({
-        title: "No Points Awarded",
+        title: "No points awarded",
         description: "Everyone predicted the same person - no points awarded!",
       });
       return;
@@ -222,12 +222,12 @@ export const FinalPredictionDialog = ({
 
     if (correctGuessers.length > 0) {
       toast({
-        title: "Points Awarded! 🎉",
+        title: "Points awarded",
         description: `${correctGuessers.length} player(s) guessed correctly and earned 5 points`,
       });
     } else {
       toast({
-        title: "No Correct Guesses",
+        title: "No correct guesses",
         description: "No one predicted the vote out correctly",
       });
     }
@@ -256,7 +256,7 @@ export const FinalPredictionDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Final Tribal Council Predictions</DialogTitle>
+          <DialogTitle>Final tribal council predictions</DialogTitle>
           <DialogDescription>
             Each player predicts who will be voted out. Correct guessers get 5 points - unless everyone picks the same person!
           </DialogDescription>
@@ -265,18 +265,18 @@ export const FinalPredictionDialog = ({
         <div className="space-y-6">
           {/* Submission Status */}
           <div className="space-y-2">
-            <h3 className="font-semibold">Submission Status:</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <h3 className="label-caps text-muted-foreground">Submission status</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {players.map((player) => {
                 const hasSubmitted = getPlayersWhoSubmitted().includes(player);
                 return (
-                  <div key={player} className="flex items-center gap-2">
+                  <div key={player} className="glass flex min-h-[44px] items-center gap-2 rounded-[12px] px-3 py-2">
                     {hasSubmitted ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
                     ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground" />
+                      <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
                     )}
-                    <span className={hasSubmitted ? "text-foreground" : "text-muted-foreground"}>
+                    <span className={`min-w-0 truncate ${hasSubmitted ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                       {player}
                     </span>
                   </div>
@@ -287,12 +287,12 @@ export const FinalPredictionDialog = ({
 
           {/* Prediction Form */}
           {!isRevealed && (
-            <div className="space-y-4 p-4 border rounded-lg">
-              <h3 className="font-semibold">Submit Prediction:</h3>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="plank space-y-4 p-4">
+              <h3 className="label-caps text-muted-foreground">Submit prediction</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {isAdmin && (
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Player</label>
+                    <label className="text-sm font-semibold">Player</label>
                     <Select value={selectedPlayer} onValueChange={(value) => setSelectedPlayer(value as Player)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select player" />
@@ -307,8 +307,8 @@ export const FinalPredictionDialog = ({
                     </Select>
                   </div>
                 )}
-                <div className={`space-y-2 ${!isAdmin ? 'col-span-2' : ''}`}>
-                  <label className="text-sm font-medium">Predicted Vote Out</label>
+                <div className={`space-y-2 ${!isAdmin ? 'sm:col-span-2' : ''}`}>
+                  <label className="text-sm font-semibold">Predicted vote out</label>
                   <Select value={selectedWinner} onValueChange={setSelectedWinner}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select contestant" />
@@ -327,12 +327,17 @@ export const FinalPredictionDialog = ({
                 <p className="text-sm text-muted-foreground">Submitting as: {playerName}</p>
               )}
               {!isAdmin && playerName && getPlayersWhoSubmitted().includes(playerName as Player) && (
-                <p className="text-sm text-green-600">✓ You've already submitted your prediction</p>
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-success">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  You've already submitted your prediction
+                </p>
               )}
               {!isAdmin && !playerName && (
                 <p className="text-sm text-destructive">Your account is not assigned to a player. Contact an admin.</p>
               )}
               <Button 
+                variant="accent"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   if (!isAdmin && playerName) {
                     submitPrediction(playerName as Player);
@@ -346,7 +351,7 @@ export const FinalPredictionDialog = ({
                   (!isAdmin && (!playerName || getPlayersWhoSubmitted().includes(playerName as Player)))
                 }
               >
-                Submit Prediction
+                Submit prediction
               </Button>
             </div>
           )}
@@ -355,20 +360,20 @@ export const FinalPredictionDialog = ({
           {isRevealed && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <h3 className="font-semibold">Predictions:</h3>
+                <h3 className="label-caps text-muted-foreground">Predictions</h3>
                 <div className="space-y-2">
                   {predictions.map((prediction) => (
-                    <div key={prediction.id} className="flex justify-between p-2 border rounded">
-                      <span className="font-medium">{prediction.player_name}</span>
-                      <span className="text-muted-foreground">{prediction.predicted_winner}</span>
+                    <div key={prediction.id} className="glass flex min-h-[44px] items-center justify-between gap-3 rounded-[12px] px-3 py-2">
+                      <span className="font-semibold">{prediction.player_name}</span>
+                      <span className="text-muted-foreground text-right">{prediction.predicted_winner}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {isAdmin && (
-                <div className="space-y-2 p-4 border rounded-lg">
-                  <h3 className="font-semibold">Who Actually Got Voted Out?</h3>
+                <div className="space-y-3 rounded-[12px] border-2 border-accent bg-accent/10 p-4">
+                  <h3 className="font-extrabold">Who actually got voted out?</h3>
                   <Select value={actualVoteOut} onValueChange={setActualVoteOut}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select contestant" />
@@ -381,8 +386,8 @@ export const FinalPredictionDialog = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button onClick={confirmVoteOut} disabled={!actualVoteOut} className="w-full">
-                    Confirm & Award Points
+                  <Button variant="accent" onClick={confirmVoteOut} disabled={!actualVoteOut} className="w-full">
+                    Confirm & award points
                   </Button>
                 </div>
               )}
@@ -393,8 +398,8 @@ export const FinalPredictionDialog = ({
           {isAdmin && (
             <div className="flex gap-2">
               {!isRevealed && predictions.length > 0 && (
-                <Button onClick={revealAndScore} variant="default">
-                  Reveal & Check Predictions
+                <Button onClick={revealAndScore} variant="default" className="w-full sm:w-auto">
+                  Reveal & check predictions
                 </Button>
               )}
             </div>

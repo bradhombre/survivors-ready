@@ -47,7 +47,7 @@ export function BugReportDialog({ open, onOpenChange, leagueId }: BugReportDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Report a Bug</DialogTitle>
+          <DialogTitle>Report a bug</DialogTitle>
           <DialogDescription>
             Describe the issue you encountered. We'll look into it!
           </DialogDescription>
@@ -57,8 +57,10 @@ export function BugReportDialog({ open, onOpenChange, leagueId }: BugReportDialo
           value={description}
           onChange={(e) => setDescription(e.target.value.slice(0, 2000))}
           rows={5}
+          className="rounded-[10px] border-2 bg-card text-base md:text-sm"
+          aria-label="Bug description"
         />
-        <p className="text-xs text-muted-foreground text-right">
+        <p className="text-xs font-semibold text-muted-foreground text-right tabular">
           {description.length}/2000
         </p>
         <DialogFooter>

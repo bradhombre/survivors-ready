@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Player, Contestant, ScoringEvent, SCORING_ACTIONS } from "@/types/survivor";
-import { ChevronUp, ChevronDown, Undo, Save, Plus, Minus, Search, ChevronRight, Grid3x3, List, Upload, User, Trophy, Scale, Flame, TreePalm, MoreHorizontal } from "lucide-react";
+import { ChevronUp, ChevronDown, Undo, Save, Plus, Minus, Search, ChevronRight, Grid3x3, List, Upload, User, Trophy, Scale, Flame, TreePalm, MoreHorizontal, Droplets, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FinalPredictionDialog } from "./FinalPredictionDialog";
@@ -63,6 +63,14 @@ interface GameModeProps {
   onExport: () => void;
   onUpdatePlayerAvatar: (player: Player, avatar: string) => void;
 }
+
+// Scoring event tiles (spec 03): 64px plank tile, label on top, points below in tabular numbers.
+// Stacked rather than side by side so labels never collide with points in narrow 2-column grids.
+const EVENT_BTN =
+  "h-auto min-h-[64px] w-full flex-col items-start justify-center gap-1 whitespace-normal rounded-[12px] bg-muted/60 px-3 py-2 text-left text-sm font-semibold leading-tight hover:bg-muted";
+const EVENT_BTN_SM = `${EVENT_BTN} min-h-[56px]`;
+const EVENT_MORE_BTN = `${EVENT_BTN} flex-row items-center justify-between`;
+const EVENT_PTS = "shrink-0 text-xl font-black leading-none tabular";
 
 export const GameMode = ({
   leagueId,
@@ -126,7 +134,7 @@ export const GameMode = ({
       reader.onloadend = () => {
         onUpdatePlayerAvatar(player, reader.result as string);
         toast({
-          title: "Profile Picture Updated! 📸",
+          title: "Profile picture updated",
           description: `${player}'s avatar has been updated`,
         });
       };
@@ -175,15 +183,16 @@ export const GameMode = ({
 
   // Generate dynamic colors for teams
   const getTeamColor = (index: number) => {
+    // Deep Jungle tokens only: canopy, clay, fern, sun, lichen
     const colors = [
-      "border-l-blue-500",
-      "border-l-rose-500", 
-      "border-l-amber-500",
-      "border-l-emerald-500",
-      "border-l-violet-500",
-      "border-l-cyan-500",
-      "border-l-orange-500",
-      "border-l-pink-500",
+      "border-l-primary",
+      "border-l-accent",
+      "border-l-success",
+      "border-l-warning",
+      "border-l-muted-foreground",
+      "border-l-primary",
+      "border-l-accent",
+      "border-l-success",
     ];
     return colors[index % colors.length];
   };
@@ -241,7 +250,7 @@ export const GameMode = ({
   const handleQuickScore = (contestant: Contestant, action: string, points: number) => {
     if (action.includes("Cry") && cryingThisEpisode.has(contestant.id)) {
       toast({
-        title: "Already Cried This Episode 😭",
+        title: "Already cried this episode",
         description: `${contestant.name} already cried this episode (limit 1)`,
         variant: "destructive",
       });
@@ -251,7 +260,7 @@ export const GameMode = ({
     onAddScoringEvent(contestant.id, contestant.name, action, points);
     if (currentUserId) updateLastActive(currentUserId);
     toast({
-      title: points > 0 ? "Points Added! ✅" : "Points Deducted! ⚠️",
+      title: points > 0 ? "Points added" : "Points deducted",
       description: `${contestant.name}: ${action} (${points > 0 ? "+" : ""}${points})`,
     });
   };
@@ -306,7 +315,7 @@ export const GameMode = ({
     }
     
     toast({
-      title: "Jury Points Awarded! ⚖️",
+      title: "Jury points awarded",
       description: `Awarded ${points} points to ${eligible.length} contestant(s)`,
     });
     
@@ -325,7 +334,7 @@ export const GameMode = ({
     }
     
     toast({
-      title: `Survival Points Awarded! ${isPostMerge ? "🔥" : "🌴"}`,
+      title: "Survival points awarded",
       description: `Awarded ${points} points to ${eligible.length} contestant(s)`,
     });
     
@@ -336,37 +345,39 @@ export const GameMode = ({
     <TooltipProvider>
     <div className="container max-w-7xl mx-auto p-4 md:p-8 space-y-6">
       {/* Header */}
-      <div className="glass-strong p-6 rounded-2xl space-y-4">
+      <div className="plank p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="font-display text-4xl md:text-5xl leading-none">
+            <h2 className="font-display text-4xl md:text-5xl leading-none text-primary">
               Season {season}
-            </h1>
-            <p className="text-muted-foreground">Episode {episode}</p>
+            </h2>
+            <p className="label-caps mt-1.5 text-muted-foreground">Episode {episode}</p>
           </div>
 
           {/* Mobile Layout */}
           {isMobile ? (
-            <div className="flex flex-col gap-2 w-full mt-2">
-              {/* Row 1: Episode controls + Pre/Post Merge */}
+            <div className="flex flex-col gap-2 w-full">
+              {/* Row 1: Episode stepper + phase chip */}
               <div className="flex items-center gap-2 w-full">
-                <div className="flex items-center glass rounded-lg">
+                <div className="flex h-12 items-center rounded-full border-2 border-plank bg-background">
                   <Button
                     onClick={() => isAdmin && onEpisodeChange(Math.max(1, episode - 1))}
-                    size="sm"
+                    size="icon"
                     variant="ghost"
                     disabled={!isAdmin}
-                    className={!isAdmin ? "cursor-not-allowed" : ""}
+                    aria-label="Previous episode"
+                    className={`rounded-full ${!isAdmin ? "cursor-not-allowed" : ""}`}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
-                  <span className="px-2 font-bold text-sm">Ep {episode}</span>
+                  <span className="min-w-[4rem] text-center text-lg font-black tabular">Ep {episode}</span>
                   <Button
                     onClick={() => isAdmin && onEpisodeChange(episode + 1)}
-                    size="sm"
+                    size="icon"
                     variant="ghost"
                     disabled={!isAdmin}
-                    className={!isAdmin ? "cursor-not-allowed" : ""}
+                    aria-label="Next episode"
+                    className={`rounded-full ${!isAdmin ? "cursor-not-allowed" : ""}`}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -376,12 +387,12 @@ export const GameMode = ({
                   <TooltipTrigger asChild>
                     <Button
                       onClick={() => isAdmin && onTogglePostMerge()}
-                      variant={isPostMerge ? "accent" : "outline"}
-                      size="sm"
+                      variant="outline"
                       disabled={!isAdmin}
-                      className={!isAdmin ? "cursor-not-allowed" : ""}
+                      className={`h-11 rounded-full px-3 disabled:opacity-100 ${!isAdmin ? "cursor-not-allowed" : ""}`}
                     >
-                      {isPostMerge ? "🔥 Post" : "🌴 Pre"}
+                      {isPostMerge ? <Flame className="text-accent" /> : <TreePalm className="text-success" />}
+                      {isPostMerge ? "Post-merge" : "Pre-merge"}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Toggle between pre-merge (+5) and post-merge (+10) survival points</TooltipContent>
@@ -393,12 +404,12 @@ export const GameMode = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      size="sm"
+                      variant="accent"
                       onClick={() => setShowPredictionDialog(true)}
-                      className="flex-1 gap-1"
+                      className="flex-1 px-4"
                     >
                       <Trophy className="h-4 w-4" />
-                      Tribal
+                      Tribal prediction
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Submit predictions and vote out contestants at tribal council</TooltipContent>
@@ -409,28 +420,32 @@ export const GameMode = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="outline">
+                          <Button size="icon" variant="outline" aria-label="Admin actions">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                       </TooltipTrigger>
                       <TooltipContent>Admin actions menu</TooltipContent>
                     </Tooltip>
-                    <DropdownMenuContent align="end" className="bg-popover border shadow-lg z-50">
-                      <DropdownMenuItem onClick={() => setShowSurvivorsDialog(true)}>
-                        {isPostMerge ? "🔥" : "🌴"} Mark All Survived
+                    <DropdownMenuContent align="end" className="z-50 min-w-[14rem] rounded-[12px] border-2 border-plank bg-popover p-1 shadow-md">
+                      <DropdownMenuItem onClick={() => setShowSurvivorsDialog(true)} className="min-h-[44px] gap-2 rounded-[8px] font-semibold">
+                        {isPostMerge ? <Flame className="h-4 w-4 text-accent" /> : <TreePalm className="h-4 w-4 text-success" />}
+                        Mark all survived
                       </DropdownMenuItem>
                       {isPostMerge && isActionEnabled("MAKE_JURY", scoringConfig) && (
-                        <DropdownMenuItem onClick={() => setShowJuryDialog(true)}>
-                          ⚖️ Award Jury Points
+                        <DropdownMenuItem onClick={() => setShowJuryDialog(true)} className="min-h-[44px] gap-2 rounded-[8px] font-semibold">
+                          <Scale className="h-4 w-4 text-muted-foreground" />
+                          Award jury points
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={onUndo}>
-                        Undo Last Action
+                      <DropdownMenuItem onClick={onUndo} className="min-h-[44px] gap-2 rounded-[8px] font-semibold">
+                        <Undo className="h-4 w-4 text-muted-foreground" />
+                        Undo last action
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={onExport}>
-                        Export Game Data
+                      <DropdownMenuItem onClick={onExport} className="min-h-[44px] gap-2 rounded-[8px] font-semibold">
+                        <Save className="h-4 w-4 text-muted-foreground" />
+                        Export game data
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -440,7 +455,7 @@ export const GameMode = ({
                   <>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={onUndo}>
+                        <Button size="icon" variant="outline" onClick={onUndo} aria-label="Undo last scoring action">
                           <Undo className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
@@ -448,7 +463,7 @@ export const GameMode = ({
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={onExport}>
+                        <Button size="icon" variant="outline" onClick={onExport} aria-label="Export game data">
                           <Save className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
@@ -460,24 +475,26 @@ export const GameMode = ({
             </div>
           ) : (
             /* Desktop Layout */
-            <div className="flex flex-wrap gap-2">
-              <div className="flex items-center glass rounded-lg">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex h-12 items-center rounded-full border-2 border-plank bg-background">
                 <Button
                   onClick={() => isAdmin && onEpisodeChange(Math.max(1, episode - 1))}
                   size="icon"
                   variant="ghost"
                   disabled={!isAdmin}
-                  className={!isAdmin ? "cursor-not-allowed" : ""}
+                  aria-label="Previous episode"
+                  className={`rounded-full ${!isAdmin ? "cursor-not-allowed" : ""}`}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                <span className="px-4 font-bold">Ep {episode}</span>
+                <span className="min-w-[4.5rem] text-center text-lg font-black tabular">Ep {episode}</span>
                 <Button
                   onClick={() => isAdmin && onEpisodeChange(episode + 1)}
                   size="icon"
                   variant="ghost"
                   disabled={!isAdmin}
-                  className={!isAdmin ? "cursor-not-allowed" : ""}
+                  aria-label="Next episode"
+                  className={`rounded-full ${!isAdmin ? "cursor-not-allowed" : ""}`}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -487,11 +504,12 @@ export const GameMode = ({
                 <TooltipTrigger asChild>
                   <Button
                     onClick={() => isAdmin && onTogglePostMerge()}
-                    variant={isPostMerge ? "accent" : "outline"}
+                    variant="outline"
                     disabled={!isAdmin}
-                    className={!isAdmin ? "cursor-not-allowed" : ""}
+                    className={`rounded-full px-4 disabled:opacity-100 ${!isAdmin ? "cursor-not-allowed" : ""}`}
                   >
-                    {isPostMerge ? "Post-Merge 🔥" : "Pre-Merge 🌴"}
+                    {isPostMerge ? <Flame className="text-accent" /> : <TreePalm className="text-success" />}
+                    {isPostMerge ? "Post-merge" : "Pre-merge"}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Toggle between pre-merge (+5) and post-merge (+10) survival points</TooltipContent>
@@ -501,11 +519,10 @@ export const GameMode = ({
                 <TooltipTrigger asChild>
                   <Button
                     onClick={() => setShowPredictionDialog(true)}
-                    variant="default"
-                    className="gap-2"
+                    variant="accent"
                   >
                     <Trophy className="h-4 w-4" />
-                    Tribal Prediction
+                    Tribal prediction
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Submit predictions and vote out contestants at tribal council</TooltipContent>
@@ -517,9 +534,9 @@ export const GameMode = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="gap-2">
-                          {isPostMerge ? <Flame className="h-4 w-4" /> : <TreePalm className="h-4 w-4" />}
-                          {isPostMerge ? "🔥" : "🌴"} Mark Survivors
+                        <Button variant="outline">
+                          {isPostMerge ? <Flame className="h-4 w-4 text-accent" /> : <TreePalm className="h-4 w-4 text-success" />}
+                          Mark survivors
                         </Button>
                       </AlertDialogTrigger>
                     </TooltipTrigger>
@@ -527,15 +544,15 @@ export const GameMode = ({
                   </Tooltip>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Award Survival Points</AlertDialogTitle>
+                      <AlertDialogTitle>Award survival points</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Award {survivePoints} points ({isPostMerge ? "Post-Merge" : "Pre-Merge"}) to all surviving, owned contestants for Episode {episode}.
+                        Award {survivePoints} points ({isPostMerge ? "post-merge" : "pre-merge"}) to all surviving, owned contestants for Episode {episode}.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <div className="max-h-48 overflow-y-auto space-y-1 my-4">
+                    <div className="max-h-48 overflow-y-auto space-y-1.5 my-4">
                       {getContestantsForSurvivalPoints().map(c => (
-                        <div key={c.id} className="text-sm flex justify-between p-2 glass rounded">
-                          <span>{c.name}</span>
+                        <div key={c.id} className="glass flex min-h-[40px] items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm">
+                          <span className="font-semibold">{c.name}</span>
                           <span className="text-muted-foreground">{c.owner}</span>
                         </div>
                       ))}
@@ -549,7 +566,7 @@ export const GameMode = ({
                         onClick={handleAwardAllSurvivalPoints}
                         disabled={getContestantsForSurvivalPoints().length === 0}
                       >
-                        Award {getContestantsForSurvivalPoints().length} Contestant(s)
+                        Award {getContestantsForSurvivalPoints().length} contestant(s)
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -562,9 +579,9 @@ export const GameMode = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="gap-2">
+                        <Button variant="outline">
                           <Scale className="h-4 w-4" />
-                          ⚖️ Award Jury
+                          Award jury
                         </Button>
                       </AlertDialogTrigger>
                     </TooltipTrigger>
@@ -572,15 +589,15 @@ export const GameMode = ({
                   </Tooltip>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Award Jury Points</AlertDialogTitle>
+                      <AlertDialogTitle>Award jury points</AlertDialogTitle>
                       <AlertDialogDescription>
                         Award {getPoints("MAKE_JURY", scoringConfig)} points to all surviving, owned contestants who haven't already received jury points.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <div className="max-h-48 overflow-y-auto space-y-1 my-4">
+                    <div className="max-h-48 overflow-y-auto space-y-1.5 my-4">
                       {getContestantsForJuryPoints().map(c => (
-                        <div key={c.id} className="text-sm flex justify-between p-2 glass rounded">
-                          <span>{c.name}</span>
+                        <div key={c.id} className="glass flex min-h-[40px] items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm">
+                          <span className="font-semibold">{c.name}</span>
                           <span className="text-muted-foreground">{c.owner}</span>
                         </div>
                       ))}
@@ -594,7 +611,7 @@ export const GameMode = ({
                         onClick={handleAwardAllJuryPoints}
                         disabled={getContestantsForJuryPoints().length === 0}
                       >
-                        Award {getContestantsForJuryPoints().length} Contestant(s)
+                        Award {getContestantsForJuryPoints().length} contestant(s)
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -603,7 +620,7 @@ export const GameMode = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={onUndo} variant="outline" size="icon">
+                  <Button onClick={onUndo} variant="outline" size="icon" aria-label="Undo last scoring action">
                     <Undo className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -612,7 +629,7 @@ export const GameMode = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={onExport} variant="outline" size="icon">
+                  <Button onClick={onExport} variant="outline" size="icon" aria-label="Export game data">
                     <Save className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -634,15 +651,15 @@ export const GameMode = ({
       <AlertDialog open={showSurvivorsDialog} onOpenChange={setShowSurvivorsDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Award Survival Points</AlertDialogTitle>
+            <AlertDialogTitle>Award survival points</AlertDialogTitle>
             <AlertDialogDescription>
-              Award {survivePoints} points ({isPostMerge ? "Post-Merge" : "Pre-Merge"}) to all surviving, owned contestants for Episode {episode}.
+              Award {survivePoints} points ({isPostMerge ? "post-merge" : "pre-merge"}) to all surviving, owned contestants for Episode {episode}.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="max-h-48 overflow-y-auto space-y-1 my-4">
+          <div className="max-h-48 overflow-y-auto space-y-1.5 my-4">
             {getContestantsForSurvivalPoints().map(c => (
-              <div key={c.id} className="text-sm flex justify-between p-2 glass rounded">
-                <span>{c.name}</span>
+              <div key={c.id} className="glass flex min-h-[40px] items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm">
+                <span className="font-semibold">{c.name}</span>
                 <span className="text-muted-foreground">{c.owner}</span>
               </div>
             ))}
@@ -656,7 +673,7 @@ export const GameMode = ({
               onClick={handleAwardAllSurvivalPoints}
               disabled={getContestantsForSurvivalPoints().length === 0}
             >
-              Award {getContestantsForSurvivalPoints().length} Contestant(s)
+              Award {getContestantsForSurvivalPoints().length} contestant(s)
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -665,15 +682,15 @@ export const GameMode = ({
       <AlertDialog open={showJuryDialog} onOpenChange={setShowJuryDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Award Jury Points</AlertDialogTitle>
+            <AlertDialogTitle>Award jury points</AlertDialogTitle>
             <AlertDialogDescription>
               Award {getPoints("MAKE_JURY", scoringConfig)} points to all surviving, owned contestants who haven't already received jury points.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="max-h-48 overflow-y-auto space-y-1 my-4">
+          <div className="max-h-48 overflow-y-auto space-y-1.5 my-4">
             {getContestantsForJuryPoints().map(c => (
-              <div key={c.id} className="text-sm flex justify-between p-2 glass rounded">
-                <span>{c.name}</span>
+              <div key={c.id} className="glass flex min-h-[40px] items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm">
+                <span className="font-semibold">{c.name}</span>
                 <span className="text-muted-foreground">{c.owner}</span>
               </div>
             ))}
@@ -687,7 +704,7 @@ export const GameMode = ({
               onClick={handleAwardAllJuryPoints}
               disabled={getContestantsForJuryPoints().length === 0}
             >
-              Award {getContestantsForJuryPoints().length} Contestant(s)
+              Award {getContestantsForJuryPoints().length} contestant(s)
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -800,7 +817,7 @@ export const GameMode = ({
                   </div>
                   
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="w-full mt-2">
+                    <Button variant="ghost" size="sm" className="w-full mt-2 h-11 text-sm">
                       {isExpanded ? (
                         <>
                           <ChevronUp className="h-4 w-4 mr-2" />
@@ -817,7 +834,7 @@ export const GameMode = ({
                 </div>
 
                 <CollapsibleContent>
-                  <div className="px-6 pb-6 space-y-4">
+                  <div className="px-5 pb-5 space-y-4">
                     {/* Episode Breakdown */}
                     <div className="glass p-3 rounded-[12px]">
                       <h4 className="label-caps mb-2 text-muted-foreground">Episode scores</h4>
@@ -857,7 +874,7 @@ export const GameMode = ({
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="xs" isEliminated={contestant.isEliminated} />
                                 <div className="flex-1 min-w-0">
-                                  <p className={`font-semibold text-sm truncate ${contestant.isEliminated ? "line-through" : ""}`}>{contestant.name}</p>
+                                  <p className={`font-semibold text-sm truncate ${contestant.isEliminated ? "line-through text-muted-foreground" : ""}`}>{contestant.name}</p>
                                   <p className="text-xs text-muted-foreground">
                                     Pick #{contestant.pickNumber}
                                     {contestant.tribe && ` • ${contestant.tribe}`}
@@ -886,8 +903,8 @@ export const GameMode = ({
       </div>
 
       {/* Filters */}
-      <Card className="glass p-4">
-        <div className="flex flex-wrap gap-3">
+      <div className="glass rounded-[12px] p-3">
+        <div className="flex flex-wrap gap-2">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -895,7 +912,7 @@ export const GameMode = ({
                 placeholder="Search contestants..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 glass"
+                className="pl-10"
               />
             </div>
           </div>
@@ -903,9 +920,9 @@ export const GameMode = ({
           <select
             value={filterOwner}
             onChange={(e) => setFilterOwner(e.target.value as Player | "all")}
-            className="glass px-4 py-2 rounded-lg border-border"
+            className="h-11 rounded-[10px] border-2 border-input bg-card px-3 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="all">All Teams</option>
+            <option value="all">All teams</option>
             {draftOrder.map((player) => (
               <option key={player} value={player}>{player}</option>
             ))}
@@ -915,34 +932,34 @@ export const GameMode = ({
             onClick={() => setShowEliminated(!showEliminated)}
             variant={showEliminated ? "default" : "outline"}
           >
-            {showEliminated ? "Hide" : "Show"} Eliminated
+            {showEliminated ? "Hide" : "Show"} eliminated
           </Button>
         </div>
-      </Card>
+      </div>
 
       {/* Scoring Section - Grouped by Player */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-3xl leading-none">Score this episode</h2>
-          
-          <div className="flex items-center gap-2 glass p-1 rounded-xl">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-3xl leading-none text-primary">Score this episode</h2>
+
+          <div className="glass flex items-center gap-1 rounded-full p-1">
             <Button
               onClick={() => setScoringView("team")}
               variant={scoringView === "team" ? "default" : "ghost"}
-              size="sm"
-              className="gap-2"
+              aria-pressed={scoringView === "team"}
+              className="h-11 rounded-full px-4"
             >
               <Grid3x3 className="h-4 w-4" />
-              Team View
+              Team view
             </Button>
             <Button
               onClick={() => setScoringView("all")}
               variant={scoringView === "all" ? "default" : "ghost"}
-              size="sm"
-              className="gap-2"
+              aria-pressed={scoringView === "all"}
+              className="h-11 rounded-full px-4"
             >
               <List className="h-4 w-4" />
-              All Players
+              All players
             </Button>
           </div>
         </div>
@@ -950,16 +967,17 @@ export const GameMode = ({
         {scoringView === "team" ? (
           contestantsByOwner.map(({ player, contestants: playerContestants }) => (
             playerContestants.length > 0 && (
-            <Card key={player} className={`glass-strong border-l-4 ${getTeamColorByName(player)} overflow-hidden`}>
-              <div className="p-4 md:p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display text-2xl leading-none">{player}'s team</h3>
-                  <span className="text-sm text-muted-foreground px-3 py-1 glass rounded-full">
-                    {playerContestants.filter(c => !c.isEliminated).length} active
+            <Card key={player} className={`overflow-hidden border-l-4 ${getTeamColorByName(player)}`}>
+              <div className="p-4 md:p-5 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-display text-2xl leading-none break-words">{player}'s team</h3>
+                  <span className="glass inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold">
+                    <span aria-hidden="true" className="h-2 w-2 rounded-full bg-success" />
+                    <span className="tabular">{playerContestants.filter(c => !c.isEliminated).length}</span> active
                   </span>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {playerContestants.map((contestant) => {
                     const isExpanded = expandedContestant === contestant.id;
                     const canCry = !cryingThisEpisode.has(contestant.id);
@@ -967,54 +985,48 @@ export const GameMode = ({
                     return (
                       <Card
                         key={contestant.id}
-                        className={`glass p-4 space-y-3 transition-all border ${
-                          contestant.isEliminated ? "opacity-50" : ""
+                        className={`space-y-3 rounded-[12px] border-[1.5px] border-border p-3 ${
+                          contestant.isEliminated ? "bg-muted/50" : ""
                         }`}
                       >
-                        {/* Header with Info and Top-Right Actions */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2 flex-1 min-w-0">
-                            <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="sm" isEliminated={contestant.isEliminated} className="mt-0.5 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-base truncate">{contestant.name}</h4>
-                            <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
-                              {contestant.age && <p>Age: {contestant.age}</p>}
-                              {contestant.location && <p className="truncate">{contestant.location}</p>}
-                              {contestant.tribe && <p>Tribe: {contestant.tribe}</p>}
-                              <p>Pick #{contestant.pickNumber}</p>
+                        {/* Castaway row: fern dot when still in, clay "Out" pill when voted out */}
+                        <div className="flex items-center gap-3">
+                          <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="md" isEliminated={contestant.isEliminated} className="shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {contestant.isEliminated ? (
+                                <span className="shrink-0 rounded-full bg-destructive px-2 py-0.5 text-[11px] font-extrabold text-destructive-foreground">
+                                  Out
+                                </span>
+                              ) : (
+                                <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-success" />
+                              )}
+                              <h4 className={`truncate text-base font-extrabold ${contestant.isEliminated ? "line-through text-muted-foreground" : ""}`}>{contestant.name}</h4>
                             </div>
+                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                              {contestant.age && <span>Age: {contestant.age}</span>}
+                              {contestant.location && <span className="truncate">{contestant.location}</span>}
+                              {contestant.tribe && <span>Tribe: {contestant.tribe}</span>}
+                              <span>Pick #{contestant.pickNumber}</span>
                             </div>
-                          </div>
-                          
-                          {/* Top-Right Action Buttons */}
-                          <div className="flex flex-col gap-1 shrink-0">
-                            {canScore && !contestant.isEliminated && (
-                              <Button
-                                onClick={() => handleQuickScore(contestant, surviveAction.label, survivePoints)}
-                                variant="success"
-                                size="sm"
-                                className="text-xs h-8 px-2"
-                              >
-                                Survive +{survivePoints}
-                              </Button>
-                            )}
-                            {isAdmin && !contestant.isEliminated && (
-                              <Button
-                                onClick={() => {
-                                  handleQuickScore(contestant, SCORING_ACTIONS.VOTED_OUT.label, getPoints("VOTED_OUT", scoringConfig));
-                                }}
-                                variant="destructive"
-                                size="sm"
-                                className="text-xs h-8 px-2"
-                              >
-                                Voted Out
-                              </Button>
-                            )}
                           </div>
                         </div>
 
-                        {/* Bottom Quick Actions */}
-                        <div className={`grid grid-cols-3 gap-2 ${canScore ? "" : "hidden"}`}>
+                        {/* Scoring events: 2-column, 64px tiles */}
+                        <div className={`grid grid-cols-2 gap-2 ${canScore ? "" : "hidden"}`}>
+                          {canScore && !contestant.isEliminated && (
+                            <Button
+                              onClick={() => handleQuickScore(contestant, surviveAction.label, survivePoints)}
+                              variant="outline"
+                              className={EVENT_BTN}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                {isPostMerge ? <Flame className="text-accent" /> : <TreePalm className="text-success" />}
+                                Survive
+                              </span>
+                              <span className={`${EVENT_PTS} text-success`}>+{survivePoints}</span>
+                            </Button>
+                          )}
                           {isActionEnabled("WIN_IMMUNITY", scoringConfig) && (
                             <Button
                               onClick={() =>
@@ -1024,40 +1036,43 @@ export const GameMode = ({
                                   getPoints("WIN_IMMUNITY", scoringConfig)
                                 )
                               }
-                              variant="accent"
-                              size="sm"
-                              className="text-xs"
+                              variant="outline"
+                              className={EVENT_BTN}
                             >
-                              🏆 Immunity
-                              <br />+{getPoints("WIN_IMMUNITY", scoringConfig)}
+                              <span className="flex items-center gap-1.5">
+                                <Trophy className="text-muted-foreground" />
+                                Immunity
+                              </span>
+                              <span className={`${EVENT_PTS} text-success`}>+{getPoints("WIN_IMMUNITY", scoringConfig)}</span>
                             </Button>
                           )}
                           {canCry && isActionEnabled("CRY", scoringConfig) && (
                             <Button
                               onClick={() => handleQuickScore(contestant, SCORING_ACTIONS.CRY.label, getPoints("CRY", scoringConfig))}
                               variant="outline"
-                              size="sm"
-                              className="text-xs"
+                              className={EVENT_BTN}
                             >
-                              😭 Cry
-                              <br />+{getPoints("CRY", scoringConfig)}
+                              <span className="flex items-center gap-1.5">
+                                <Droplets className="text-muted-foreground" />
+                                Cry
+                              </span>
+                              <span className={`${EVENT_PTS} text-success`}>+{getPoints("CRY", scoringConfig)}</span>
                             </Button>
                           )}
                           <Button
                             onClick={() => setExpandedContestant(isExpanded ? null : contestant.id)}
                             variant="outline"
-                            size="sm"
-                            className="text-xs"
+                            aria-expanded={isExpanded}
+                            className={EVENT_MORE_BTN}
                           >
-                            More
-                            <br />
-                            {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                            <span>More</span>
+                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           </Button>
                         </div>
 
                         {/* Expanded Menu */}
                         {canScore && isExpanded && (
-                          <div className="glass-strong p-3 rounded-lg space-y-2 animate-in slide-in-from-top">
+                          <div className="grid grid-cols-2 gap-2 border-t-2 border-border pt-3 animate-in slide-in-from-top">
                             {Object.entries(SCORING_ACTIONS).map(([key, action]) => {
                               if (key === "SURVIVE_PRE" || key === "SURVIVE_POST" || key === "VOTED_OUT" || key === "CRY") return null;
                               if (!isActionEnabled(key, scoringConfig)) return null;
@@ -1068,12 +1083,11 @@ export const GameMode = ({
                                   onClick={() =>
                                     handleQuickScore(contestant, action.label, points)
                                   }
-                                  variant={points > 0 ? "success" : "destructive"}
-                                  size="sm"
-                                  className="w-full justify-between text-xs"
+                                  variant="outline"
+                                  className={EVENT_BTN_SM}
                                 >
-                                  <span>{action.label}</span>
-                                  <span className="font-bold">
+                                  <span className="min-w-0 break-words">{action.label}</span>
+                                  <span className={`${EVENT_PTS} ${points > 0 ? "text-success" : "text-destructive"}`}>
                                     {points > 0 ? "+" : ""}
                                     {points}
                                   </span>
@@ -1083,8 +1097,8 @@ export const GameMode = ({
                             {/* Custom Actions */}
                             {customActions.length > 0 && (
                               <>
-                                <div className="border-t border-border pt-2 mt-2">
-                                  <span className="text-xs text-muted-foreground">✨ Custom</span>
+                                <div className="col-span-2 pt-1">
+                                  <span className="label-caps text-muted-foreground">Custom</span>
                                 </div>
                                 {customActions.map((action) => (
                                   <Button
@@ -1092,12 +1106,11 @@ export const GameMode = ({
                                     onClick={() =>
                                       handleQuickScore(contestant, `${action.label} ${action.emoji}`, action.points)
                                     }
-                                    variant={action.points > 0 ? "success" : "destructive"}
-                                    size="sm"
-                                    className="w-full justify-between text-xs"
+                                    variant="outline"
+                                    className={EVENT_BTN_SM}
                                   >
-                                    <span>{action.emoji} {action.label}</span>
-                                    <span className="font-bold">
+                                    <span className="min-w-0 break-words">{action.emoji} {action.label}</span>
+                                    <span className={`${EVENT_PTS} ${action.points > 0 ? "text-success" : "text-destructive"}`}>
                                       {action.points > 0 ? "+" : ""}
                                       {action.points}
                                     </span>
@@ -1106,6 +1119,18 @@ export const GameMode = ({
                               </>
                             )}
                           </div>
+                        )}
+
+                        {isAdmin && !contestant.isEliminated && (
+                          <Button
+                            onClick={() => {
+                              handleQuickScore(contestant, SCORING_ACTIONS.VOTED_OUT.label, getPoints("VOTED_OUT", scoringConfig));
+                            }}
+                            variant="destructive"
+                            className="h-14 w-full rounded-[12px] text-base font-extrabold"
+                          >
+                            Voted out
+                          </Button>
                         )}
                       </Card>
                     );
@@ -1124,54 +1149,48 @@ export const GameMode = ({
               return (
                 <Card
                   key={contestant.id}
-                  className={`glass p-4 space-y-3 border-l-4 ${getTeamColorByName(contestant.owner)} transition-all ${
-                    contestant.isEliminated ? "opacity-50" : ""
+                  className={`space-y-3 p-4 border-l-4 ${getTeamColorByName(contestant.owner)} ${
+                    contestant.isEliminated ? "bg-muted/50" : ""
                   }`}
                 >
-                  {/* Header with Info and Top-Right Actions */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2 flex-1 min-w-0">
-                      <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="sm" isEliminated={contestant.isEliminated} className="mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-base truncate">{contestant.name}</h4>
-                      <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
-                        {contestant.age && <p>Age: {contestant.age}</p>}
-                        {contestant.location && <p className="truncate">{contestant.location}</p>}
-                        {contestant.tribe && <p>Tribe: {contestant.tribe}</p>}
-                        <p>{contestant.owner} • Pick #{contestant.pickNumber}</p>
+                  {/* Castaway row: fern dot when still in, clay "Out" pill when voted out */}
+                  <div className="flex items-center gap-3">
+                    <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="md" isEliminated={contestant.isEliminated} className="shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {contestant.isEliminated ? (
+                          <span className="shrink-0 rounded-full bg-destructive px-2 py-0.5 text-[11px] font-extrabold text-destructive-foreground">
+                            Out
+                          </span>
+                        ) : (
+                          <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-success" />
+                        )}
+                        <h4 className={`truncate text-base font-extrabold ${contestant.isEliminated ? "line-through text-muted-foreground" : ""}`}>{contestant.name}</h4>
                       </div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {contestant.age && <span>Age: {contestant.age}</span>}
+                        {contestant.location && <span className="truncate">{contestant.location}</span>}
+                        {contestant.tribe && <span>Tribe: {contestant.tribe}</span>}
+                        <span>{contestant.owner} • Pick #{contestant.pickNumber}</span>
                       </div>
-                    </div>
-                    
-                    {/* Top-Right Action Buttons */}
-                    <div className="flex flex-col gap-1 shrink-0">
-                      {canScore && !contestant.isEliminated && (
-                        <Button
-                          onClick={() => handleQuickScore(contestant, surviveAction.label, survivePoints)}
-                          variant="success"
-                          size="sm"
-                          className="text-xs h-8 px-2"
-                        >
-                          Survive +{survivePoints}
-                        </Button>
-                      )}
-                      {isAdmin && !contestant.isEliminated && (
-                        <Button
-                          onClick={() => {
-                            handleQuickScore(contestant, SCORING_ACTIONS.VOTED_OUT.label, getPoints("VOTED_OUT", scoringConfig));
-                          }}
-                          variant="destructive"
-                          size="sm"
-                          className="text-xs h-8 px-2"
-                        >
-                          Voted Out
-                        </Button>
-                      )}
                     </div>
                   </div>
 
-                  {/* Bottom Quick Actions */}
-                  <div className={`grid grid-cols-3 gap-2 ${canScore ? "" : "hidden"}`}>
+                  {/* Scoring events: 2-column, 64px tiles */}
+                  <div className={`grid grid-cols-2 gap-2 ${canScore ? "" : "hidden"}`}>
+                    {canScore && !contestant.isEliminated && (
+                      <Button
+                        onClick={() => handleQuickScore(contestant, surviveAction.label, survivePoints)}
+                        variant="outline"
+                        className={EVENT_BTN}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          {isPostMerge ? <Flame className="text-accent" /> : <TreePalm className="text-success" />}
+                          Survive
+                        </span>
+                        <span className={`${EVENT_PTS} text-success`}>+{survivePoints}</span>
+                      </Button>
+                    )}
                     {isActionEnabled("WIN_IMMUNITY", scoringConfig) && (
                       <Button
                         onClick={() =>
@@ -1181,40 +1200,43 @@ export const GameMode = ({
                             getPoints("WIN_IMMUNITY", scoringConfig)
                           )
                         }
-                        variant="accent"
-                        size="sm"
-                        className="text-xs"
+                        variant="outline"
+                        className={EVENT_BTN}
                       >
-                        🏆 Immunity
-                        <br />+{getPoints("WIN_IMMUNITY", scoringConfig)}
+                        <span className="flex items-center gap-1.5">
+                          <Trophy className="text-muted-foreground" />
+                          Immunity
+                        </span>
+                        <span className={`${EVENT_PTS} text-success`}>+{getPoints("WIN_IMMUNITY", scoringConfig)}</span>
                       </Button>
                     )}
                     {canCry && isActionEnabled("CRY", scoringConfig) && (
                       <Button
                         onClick={() => handleQuickScore(contestant, SCORING_ACTIONS.CRY.label, getPoints("CRY", scoringConfig))}
                         variant="outline"
-                        size="sm"
-                        className="text-xs"
+                        className={EVENT_BTN}
                       >
-                        😭 Cry
-                        <br />+{getPoints("CRY", scoringConfig)}
+                        <span className="flex items-center gap-1.5">
+                          <Droplets className="text-muted-foreground" />
+                          Cry
+                        </span>
+                        <span className={`${EVENT_PTS} text-success`}>+{getPoints("CRY", scoringConfig)}</span>
                       </Button>
                     )}
                     <Button
                       onClick={() => setExpandedContestant(isExpanded ? null : contestant.id)}
                       variant="outline"
-                      size="sm"
-                      className="text-xs"
+                      aria-expanded={isExpanded}
+                      className={EVENT_MORE_BTN}
                     >
-                      More
-                      <br />
-                      {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      <span>More</span>
+                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                   </div>
 
                   {/* Expanded Menu */}
                   {canScore && isExpanded && (
-                    <div className="glass-strong p-3 rounded-lg space-y-2 animate-in slide-in-from-top">
+                    <div className="grid grid-cols-2 gap-2 border-t-2 border-border pt-3 animate-in slide-in-from-top">
                       {Object.entries(SCORING_ACTIONS).map(([key, action]) => {
                         if (key === "SURVIVE_PRE" || key === "SURVIVE_POST" || key === "VOTED_OUT" || key === "CRY") return null;
                         if (!isActionEnabled(key, scoringConfig)) return null;
@@ -1225,12 +1247,11 @@ export const GameMode = ({
                             onClick={() =>
                               handleQuickScore(contestant, action.label, points)
                             }
-                            variant={points > 0 ? "success" : "destructive"}
-                            size="sm"
-                            className="w-full justify-between text-xs"
+                            variant="outline"
+                            className={EVENT_BTN_SM}
                           >
-                            <span>{action.label}</span>
-                            <span className="font-bold">
+                            <span className="min-w-0 break-words">{action.label}</span>
+                            <span className={`${EVENT_PTS} ${points > 0 ? "text-success" : "text-destructive"}`}>
                               {points > 0 ? "+" : ""}
                               {points}
                             </span>
@@ -1240,8 +1261,8 @@ export const GameMode = ({
                       {/* Custom Actions */}
                       {customActions.length > 0 && (
                         <>
-                          <div className="border-t border-border pt-2 mt-2">
-                            <span className="text-xs text-muted-foreground">✨ Custom</span>
+                          <div className="col-span-2 pt-1">
+                            <span className="label-caps text-muted-foreground">Custom</span>
                           </div>
                           {customActions.map((action) => (
                             <Button
@@ -1249,12 +1270,11 @@ export const GameMode = ({
                               onClick={() =>
                                 handleQuickScore(contestant, `${action.label} ${action.emoji}`, action.points)
                               }
-                              variant={action.points > 0 ? "success" : "destructive"}
-                              size="sm"
-                              className="w-full justify-between text-xs"
+                              variant="outline"
+                              className={EVENT_BTN_SM}
                             >
-                              <span>{action.emoji} {action.label}</span>
-                              <span className="font-bold">
+                              <span className="min-w-0 break-words">{action.emoji} {action.label}</span>
+                              <span className={`${EVENT_PTS} ${action.points > 0 ? "text-success" : "text-destructive"}`}>
                                 {action.points > 0 ? "+" : ""}
                                 {action.points}
                               </span>
@@ -1264,6 +1284,18 @@ export const GameMode = ({
                       )}
                     </div>
                   )}
+
+                  {isAdmin && !contestant.isEliminated && (
+                    <Button
+                      onClick={() => {
+                        handleQuickScore(contestant, SCORING_ACTIONS.VOTED_OUT.label, getPoints("VOTED_OUT", scoringConfig));
+                      }}
+                      variant="destructive"
+                      className="h-14 w-full rounded-[12px] text-base font-extrabold"
+                    >
+                      Voted out
+                    </Button>
+                  )}
                 </Card>
               );
             })}
@@ -1272,54 +1304,50 @@ export const GameMode = ({
       </div>
 
       {/* Episode Log */}
-      <Card className="glass p-6 space-y-4">
+      <Card className="p-4 md:p-6 space-y-3">
         <h2 className="font-display text-3xl leading-none">Episode {episode} events</h2>
         
         {episodeEvents.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">No points scored yet this episode. Use the buttons above to score actions.</p>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <ul className="max-h-96 overflow-y-auto divide-y-[1.5px] divide-border">
             {[...episodeEvents].reverse().map((event) => (
-              <div
+              <li
                 key={event.id}
-                className={`glass-strong p-3 rounded-lg flex items-center justify-between gap-4 ${
-                  event.points > 0 ? "border-l-4 border-l-success" : "border-l-4 border-l-destructive"
-                }`}
+                className="flex min-h-[52px] items-center gap-3 py-1.5"
               >
-                <div className="flex-1">
-                  <span className="font-bold">{event.contestantName}</span>
-                  <span className="text-muted-foreground mx-2">•</span>
-                  <span>{event.action}</span>
+                <span
+                  className={`w-12 shrink-0 text-lg font-black tabular ${
+                    event.points > 0 ? "text-success" : "text-destructive"
+                  }`}
+                >
+                  {event.points > 0 ? "+" : ""}
+                  {event.points}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate font-bold">{event.contestantName}</p>
+                  <p className="truncate text-sm text-muted-foreground">{event.action}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`font-bold text-lg ${
-                      event.points > 0 ? "text-success" : "text-destructive"
-                    }`}
+                {onUndoEvent && (
+                  <Button
+                    onClick={() => {
+                      onUndoEvent(event.id);
+                      toast({
+                        title: "Event removed",
+                        description: `Removed: ${event.contestantName} - ${event.action}`,
+                      });
+                    }}
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${event.contestantName}: ${event.action}`}
+                    className="shrink-0 rounded-full border-[1.5px] border-border"
                   >
-                    {event.points > 0 ? "+" : ""}
-                    {event.points}
-                  </span>
-                  {onUndoEvent && (
-                    <Button
-                      onClick={() => {
-                        onUndoEvent(event.id);
-                        toast({
-                          title: "Event Removed",
-                          description: `Removed: ${event.contestantName} - ${event.action}`,
-                        });
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                    >
-                      <Undo className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </Card>
     </div>

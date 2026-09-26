@@ -59,44 +59,44 @@ export const NewsFeed = () => {
 
   return (
     <>
-      <div className="border-b border-border bg-muted/30">
+      <div className="bg-header border-b border-[hsl(var(--header-fg)/0.12)]">
         <div className="container max-w-7xl mx-auto px-4">
           <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <CollapsibleTrigger asChild>
               <Button
                 variant="ghost"
-                className="w-full flex items-center justify-between py-3 h-auto"
+                className="w-full h-auto min-h-[44px] rounded-none px-0 py-2 flex items-center justify-between text-[hsl(var(--header-fg))] hover:bg-transparent hover:text-[hsl(var(--header-fg))]"
               >
                 <div className="flex items-center gap-2">
-                  <Newspaper className="h-4 w-4 text-primary" />
-                  <span className="font-medium">News</span>
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  <Newspaper className="h-4 w-4 text-header-label" />
+                  <span className="label-caps">News</span>
+                  <span className="rounded-full bg-[hsl(var(--header-fg)/0.14)] px-2 py-0.5 text-xs font-bold tabular">
                     {posts.length}
                   </span>
                 </div>
                 {isOpen ? (
-                  <ChevronUp className="h-4 w-4" />
+                  <ChevronUp className="h-4 w-4 text-header-label" />
                 ) : (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-4 w-4 text-header-label" />
                 )}
               </Button>
             </CollapsibleTrigger>
 
-            <CollapsibleContent className="pb-3 space-y-2">
+            <CollapsibleContent className="pb-2">
               {posts.map((post) => (
                 <button
                   key={post.id}
                   onClick={() => setSelectedPost(post)}
-                  className="w-full text-left px-4 py-2 rounded-md hover:bg-muted transition-colors"
+                  className="-mx-3 block w-[calc(100%+1.5rem)] min-h-[44px] text-left px-3 py-2 rounded-[10px] text-[hsl(var(--header-fg))] hover:bg-[hsl(var(--header-fg)/0.08)] transition-colors"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2 min-w-0">
-                      <p className="font-medium text-sm truncate">{post.title}</p>
+                      <p className="font-bold text-sm truncate">{post.title}</p>
                       {post.source_url && (
-                        <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <ExternalLink className="h-3 w-3 text-header-label flex-shrink-0" />
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    <span className="text-xs font-semibold text-header-label whitespace-nowrap tabular">
                       {format(new Date(post.published_at), "MMM d")}
                     </span>
                   </div>
@@ -111,10 +111,10 @@ export const NewsFeed = () => {
       <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{selectedPost?.title}</DialogTitle>
+            <DialogTitle className="pr-6 leading-snug">{selectedPost?.title}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-3 text-xs font-semibold text-muted-foreground tabular">
               <span>
                 {selectedPost &&
                   format(new Date(selectedPost.published_at), "MMMM d, yyyy")}
@@ -133,7 +133,7 @@ export const NewsFeed = () => {
                 href={selectedPost.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-primary underline-offset-4 hover:underline"
               >
                 Read full article
                 <ExternalLink className="h-3 w-3" />

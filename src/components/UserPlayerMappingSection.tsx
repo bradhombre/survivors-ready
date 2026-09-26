@@ -109,7 +109,7 @@ export function UserPlayerMappingSection({ users, onMappingUpdate }: UserPlayerM
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-2">
         <Select value={selectedUser} onValueChange={setSelectedUser}>
-          <SelectTrigger className="flex-1">
+          <SelectTrigger className="flex-1 h-11 rounded-[10px] border-2 bg-card font-bold">
             <SelectValue placeholder="Select user" />
           </SelectTrigger>
           <SelectContent>
@@ -122,7 +122,7 @@ export function UserPlayerMappingSection({ users, onMappingUpdate }: UserPlayerM
         </Select>
 
         <Select value={selectedPlayer} onValueChange={(value) => setSelectedPlayer(value as Player)}>
-          <SelectTrigger className="flex-1">
+          <SelectTrigger className="flex-1 h-11 rounded-[10px] border-2 bg-card font-bold">
             <SelectValue placeholder="Select player" />
           </SelectTrigger>
           <SelectContent>
@@ -143,15 +143,16 @@ export function UserPlayerMappingSection({ users, onMappingUpdate }: UserPlayerM
         {mappings.map((mapping) => (
           <div
             key={mapping.id}
-            className="flex items-center justify-between p-3 border rounded-lg"
+            className="glass rounded-[12px] flex min-h-[44px] items-center justify-between gap-3 p-3"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-sm">{getUserEmail(mapping.user_id)}</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="truncate text-sm font-bold">{getUserEmail(mapping.user_id)}</span>
               <Badge variant="default">{mapping.player_name}</Badge>
             </div>
             <Button
               size="sm"
               variant="outline"
+              className="shrink-0"
               onClick={() => deleteMapping(mapping.user_id)}
             >
               Remove
@@ -161,7 +162,7 @@ export function UserPlayerMappingSection({ users, onMappingUpdate }: UserPlayerM
       </div>
 
       {mappings.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-4">
+        <p className="glass rounded-[12px] text-sm text-muted-foreground text-center px-4 py-6">
           No player assignments yet. Assign users to players above.
         </p>
       )}

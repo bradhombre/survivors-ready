@@ -73,10 +73,10 @@ export const NewSeasonDialog = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isStarting}>Cancel</AlertDialogCancel>
-          <Button onClick={handleConfirm} disabled={isStarting}>
+          <Button variant="accent" onClick={handleConfirm} disabled={isStarting}>
             {isStarting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Starting...
               </>
             ) : (
@@ -128,23 +128,26 @@ export const SeasonCompleteBanner = ({
     reason === "relabel" ? `Mark as Season ${nextSeason}` : `Start Season ${nextSeason}`;
 
   return (
-    <div className="bg-gradient-to-r from-accent/20 via-primary/20 to-accent/20 border-b border-accent/30">
-      <div className="container max-w-7xl mx-auto px-4 py-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Icon className="h-6 w-6 text-accent shrink-0" />
-            <div>
-              <p className="font-semibold text-foreground">{title}</p>
+    <div className="border-b-2 border-accent bg-accent/10">
+      <div className="container max-w-7xl mx-auto px-4 py-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-plank bg-warning text-warning-foreground">
+              <Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-extrabold text-foreground">{title}</p>
               <p className="text-sm text-muted-foreground">{detail}</p>
             </div>
           </div>
 
           {isLeagueAdmin && (
             <Button
+              variant="accent"
               onClick={onStartNewSeason}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground"
+              className="w-full sm:w-auto shrink-0"
             >
-              <Trophy className="h-4 w-4 mr-2" />
+              <Trophy className="h-4 w-4" />
               {buttonLabel}
             </Button>
           )}

@@ -334,19 +334,19 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Scale className="h-5 w-5" />
-          Scoring Rules
+          <Scale className="h-5 w-5 shrink-0 text-muted-foreground" />
+          Scoring rules
         </CardTitle>
         <CardDescription>
           Apply a template or customize individual point values
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Who can score */}
-          <div className="flex items-start justify-between gap-4 pb-4 border-b border-border">
+          <div className="glass rounded-[12px] flex items-start justify-between gap-4 px-4 py-3">
             <div>
-              <p className="text-sm font-medium">Let all players score episodes</p>
+              <p className="text-sm font-bold">Let all players score episodes</p>
               <p className="text-xs text-muted-foreground">
                 When off, only commissioners can add points. Turn on for casual leagues where anyone watching can record scores. Voted Out stays commissioner-only.
               </p>
@@ -360,28 +360,27 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
           </div>
           {/* Scoring Templates */}
           {isOwner && (
-            <div className="space-y-4 pb-4 border-b border-border">
+            <div className="space-y-4 pb-5 border-b border-border">
               {/* Predefined Templates */}
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">Predefined Templates</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              <div className="space-y-2">
+                <p className="label-caps text-muted-foreground">Predefined templates</p>
+                <div className="flex flex-wrap gap-2">
                   {SCORING_TEMPLATES.map((template) => (
                     <AlertDialog key={template.id}>
                       <AlertDialogTrigger asChild>
                         <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-auto py-2 px-3 flex flex-col items-center gap-1 hover:bg-accent/50 transition-colors"
+                          variant="ghost"
+                          className="glass h-11 rounded-full px-4 gap-2 hover:bg-muted"
                         >
-                          <span className="text-xl">{template.emoji}</span>
-                          <span className="text-xs font-medium">{template.name}</span>
+                          <span className="text-base leading-none" aria-hidden="true">{template.emoji}</span>
+                          <span className="text-sm font-bold">{template.name}</span>
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle className="flex items-center gap-2">
-                            <span className="text-2xl">{template.emoji}</span>
-                            Apply "{template.name}" Template
+                            <span className="text-2xl" aria-hidden="true">{template.emoji}</span>
+                            Apply "{template.name}" template
                           </AlertDialogTitle>
                           <AlertDialogDescription>
                             {template.description}. This will replace your current scoring configuration.
@@ -393,7 +392,7 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                             const totalCount = Object.keys(SCORING_ACTIONS).length;
                             return (
                               <div className="flex items-center gap-2 pb-2 border-b border-border">
-                                <Badge variant={enabledCount === totalCount ? "default" : "secondary"}>
+                                <Badge variant={enabledCount === totalCount ? "default" : "secondary"} className="tabular">
                                   {enabledCount} of {totalCount} actions enabled
                                 </Badge>
                               </div>
@@ -411,7 +410,7 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                               toast.success(`Applied "${template.name}" template`);
                             }}
                           >
-                            Apply Template
+                            Apply template
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -423,28 +422,27 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
               {/* Saved Templates */}
               {savedTemplates.length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Bookmark className="h-4 w-4" />
-                    Your Saved Templates
+                  <p className="label-caps text-muted-foreground flex items-center gap-1.5">
+                    <Bookmark className="h-3.5 w-3.5" />
+                    Your saved templates
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {savedTemplates.map((template) => (
                       <div key={template.id} className="relative group">
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full h-auto py-2 px-3 flex flex-col items-center gap-1 hover:bg-accent/50 transition-colors border-primary/30"
+                              variant="ghost"
+                              className="glass h-11 max-w-[16rem] rounded-full px-4 gap-2 hover:bg-muted"
                             >
-                              <span className="text-xl">{template.emoji}</span>
-                              <span className="text-xs font-medium truncate max-w-full">{template.name}</span>
+                              <span className="text-base leading-none" aria-hidden="true">{template.emoji}</span>
+                              <span className="text-sm font-bold truncate">{template.name}</span>
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle className="flex items-center gap-2">
-                                <span className="text-2xl">{template.emoji}</span>
+                                <span className="text-2xl" aria-hidden="true">{template.emoji}</span>
                                 Apply "{template.name}"
                               </AlertDialogTitle>
                               <AlertDialogDescription>
@@ -454,7 +452,7 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction onClick={() => handleApplySavedTemplate(template)}>
-                                Apply Template
+                                Apply template
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -464,21 +462,22 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full border-2 border-plank bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                              aria-label={`Delete template ${template.name}`}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Template</AlertDialogTitle>
+                              <AlertDialogTitle>Delete template</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Are you sure you want to delete "{template.name}"? This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteTemplate(template.id, template.name)}>
+                              <AlertDialogAction onClick={() => handleDeleteTemplate(template.id, template.name)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -493,14 +492,14 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
               {/* Save Current Config as Template */}
               <Dialog open={saveTemplateDialogOpen} onOpenChange={setSaveTemplateDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" className="gap-2">
                     <Bookmark className="h-4 w-4" />
-                    Save Current as Template
+                    Save current as template
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Save Scoring Template</DialogTitle>
+                    <DialogTitle>Save scoring template</DialogTitle>
                     <DialogDescription>
                       Save your current scoring configuration as a template to reuse in future seasons.
                     </DialogDescription>
@@ -532,7 +531,7 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                       Cancel
                     </Button>
                     <Button onClick={handleSaveAsTemplate} disabled={savingTemplate || !newTemplateName.trim()}>
-                      {savingTemplate ? "Saving..." : "Save Template"}
+                      {savingTemplate ? "Saving..." : "Save template"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -542,12 +541,12 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
           <TooltipProvider>
             {Object.entries(SCORING_CATEGORIES).map(([category, actionKeys]) => (
               <Collapsible key={category} defaultOpen>
-                <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                  <span className="font-semibold text-sm">{category}</span>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
+                <CollapsibleTrigger className="flex min-h-[44px] w-full items-center justify-between border-b-2 border-plank py-2 text-left transition-colors hover:text-foreground [&[data-state=open]>svg]:rotate-180">
+                  <span className="label-caps text-muted-foreground">{category}</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2">
-                  <div className="space-y-2 pl-2">
+                <CollapsibleContent>
+                  <div className="divide-y divide-border">
                     {actionKeys.map((key) => {
                       const action = SCORING_ACTIONS[key as keyof typeof SCORING_ACTIONS];
                       if (!action) return null;
@@ -556,44 +555,44 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                       return (
                         <div 
                           key={key} 
-                          className={`flex items-center justify-between gap-4 py-2 px-2 rounded-md transition-opacity ${
-                            !enabled ? 'opacity-50 bg-muted/30' : ''
+                          className={`flex min-h-[52px] items-center justify-between gap-3 py-2 transition-opacity ${
+                            !enabled ? 'opacity-60' : ''
                           }`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
                             {isOwner && (
                               <Switch
                                 checked={enabled}
                                 onCheckedChange={(checked) => handleScoringToggle(key, checked)}
                               />
                             )}
-                            <span className="text-lg">{action.emoji}</span>
-                            <span className={`text-sm font-medium ${!enabled ? 'line-through text-muted-foreground' : ''}`}>
+                            <span className="text-base leading-none" aria-hidden="true">{action.emoji}</span>
+                            <span className={`text-sm font-bold ${!enabled ? 'line-through text-muted-foreground' : ''}`}>
                               {action.label.replace(` ${action.emoji}`, '')}
                             </span>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                                <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-xs">
                                 <p>{action.description}</p>
                               </TooltipContent>
                             </Tooltip>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex shrink-0 items-center gap-2">
                             {enabled ? (
                               <>
                                 <Input
                                   type="number"
                                   value={typeof scoringConfig[key] === 'number' ? scoringConfig[key] : action.points}
                                   onChange={(e) => handleScoringChange(key, parseInt(e.target.value) || 0)}
-                                  className="w-20 text-right h-8"
+                                  className="w-20 h-10 text-right font-extrabold tabular"
                                   disabled={!isOwner}
                                 />
-                                <span className="text-sm text-muted-foreground w-6">pts</span>
+                                <span className="label-caps text-muted-foreground w-7">pts</span>
                               </>
                             ) : (
-                              <span className="text-sm text-muted-foreground">Disabled</span>
+                              <span className="label-caps text-muted-foreground">Disabled</span>
                             )}
                           </div>
                         </div>
@@ -607,12 +606,12 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
 
           {/* Custom Scoring Rules Section */}
           <Collapsible defaultOpen>
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-3 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors border border-primary/20">
-              <span className="font-semibold text-sm">✨ Custom Scoring Rules</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
+            <CollapsibleTrigger className="flex min-h-[44px] w-full items-center justify-between border-b-2 border-plank py-2 text-left transition-colors hover:text-foreground [&[data-state=open]>svg]:rotate-180">
+              <span className="label-caps text-muted-foreground">Custom scoring rules</span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="pt-2">
-              <div className="space-y-3 pl-2">
+            <CollapsibleContent>
+              <div className="divide-y divide-border">
                 {customActions.length === 0 && !isOwner && (
                   <p className="text-sm text-muted-foreground py-2">No custom scoring rules defined.</p>
                 )}
@@ -620,9 +619,9 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                 {customActions.map((action) => (
                   <div 
                     key={action.id} 
-                    className="flex items-center justify-between gap-4 py-2 px-2 rounded-md bg-muted/30"
+                    className="flex min-h-[52px] items-center justify-between gap-3 py-2"
                   >
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex min-w-0 items-center gap-3 flex-1">
                       <EmojiPicker
                         value={action.emoji}
                         onChange={(emoji) => handleUpdateCustomAction(action.id, { emoji })}
@@ -631,26 +630,27 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                       <Input
                         value={action.label}
                         onChange={(e) => handleUpdateCustomAction(action.id, { label: e.target.value })}
-                        className="flex-1 h-8"
+                        className="flex-1 h-10 font-bold"
                         disabled={!isOwner}
                         placeholder="Action label"
                       />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       <Input
                         type="number"
                         value={action.points}
                         onChange={(e) => handleUpdateCustomAction(action.id, { points: parseInt(e.target.value) || 0 })}
-                        className="w-20 text-right h-8"
+                        className="w-20 h-10 text-right font-extrabold tabular"
                         disabled={!isOwner}
                       />
-                      <span className="text-sm text-muted-foreground w-6">pts</span>
+                      <span className="label-caps text-muted-foreground w-7">pts</span>
                       {isOwner && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="h-10 w-10 text-destructive hover:text-destructive"
                           onClick={() => handleDeleteCustomAction(action.id)}
+                          aria-label={`Remove ${action.label}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -660,8 +660,8 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                 ))}
                 
                 {isOwner && (
-                  <div className="border-t border-border pt-3 mt-3">
-                    <p className="text-sm text-muted-foreground mb-2">Add Custom Action:</p>
+                  <div className="pt-4">
+                    <p className="label-caps text-muted-foreground mb-2">Add custom action</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       <EmojiPicker
                         value={newActionEmoji}
@@ -670,22 +670,20 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                       <Input
                         value={newActionLabel}
                         onChange={(e) => setNewActionLabel(e.target.value)}
-                        className="flex-1 min-w-[150px] h-9"
+                        className="flex-1 min-w-[150px]"
                         placeholder="Action label (e.g., Wins Reward)"
                       />
                       <Input
                         type="number"
                         value={newActionPoints}
                         onChange={(e) => setNewActionPoints(parseInt(e.target.value) || 0)}
-                        className="w-20 text-right h-9"
+                        className="w-20 text-right font-extrabold tabular"
                       />
-                      <span className="text-sm text-muted-foreground">pts</span>
+                      <span className="label-caps text-muted-foreground">pts</span>
                       <Button
                         onClick={handleAddCustomAction}
-                        size="sm"
-                        className="h-9"
                       >
-                        <Plus className="h-4 w-4 mr-1" />
+                        <Plus className="h-4 w-4" />
                         Add
                       </Button>
                     </div>
@@ -696,20 +694,20 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
           </Collapsible>
           
           {isOwner && (
-            <div className="flex justify-between items-center pt-4 border-t border-border">
+            <div className="flex flex-wrap justify-between items-center gap-3 pt-4 border-t-2 border-plank">
               <Button 
                 variant="outline"
                 onClick={handleResetToDefaults}
               >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reset to Defaults
+                <RotateCcw className="h-4 w-4" />
+                Reset to defaults
               </Button>
               <Button 
                 onClick={handleSaveScoringConfig} 
                 disabled={savingScoring || !hasUnsavedScoringChanges()}
               >
-                <Save className="h-4 w-4 mr-2" />
-                {savingScoring ? "Saving..." : "Save Scoring Rules"}
+                <Save className="h-4 w-4" />
+                {savingScoring ? "Saving..." : "Save scoring rules"}
               </Button>
             </div>
           )}

@@ -56,19 +56,19 @@ export function AdminSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
-          App Settings
+        <CardTitle className="flex items-center gap-2 text-3xl">
+          <Settings className="h-5 w-5 text-muted-foreground" />
+          App settings
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <div className="space-y-2 max-w-lg">
-          <Label htmlFor="current-season">Current season</Label>
+          <Label htmlFor="current-season" className="label-caps text-muted-foreground">Current season</Label>
           <Input
             id="current-season"
             type="number"
             min={1}
-            className="w-32"
+            className="w-32 tabular"
             value={currentSeason}
             onChange={(e) => setCurrentSeason(e.target.value)}
           />
@@ -77,7 +77,7 @@ export function AdminSettings() {
           </p>
         </div>
         <div className="space-y-2 max-w-lg">
-          <Label htmlFor="donate-url">Donate / Buy Me a Coffee URL</Label>
+          <Label htmlFor="donate-url" className="label-caps text-muted-foreground">Donate / Buy Me a Coffee URL</Label>
           <Input
             id="donate-url"
             placeholder="https://buymeacoffee.com/yourname"
@@ -88,7 +88,7 @@ export function AdminSettings() {
             Leave empty to hide the donate button throughout the app.
           </p>
         </div>
-        <Button onClick={handleSave} disabled={saving} size="sm">
+        <Button onClick={handleSave} disabled={saving}>
           <Save className="h-4 w-4 mr-2" />
           {saving ? 'Saving...' : 'Save'}
         </Button>

@@ -219,9 +219,9 @@ export const NewsManager = () => {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <CardTitle className="flex items-center gap-2">
-            <Newspaper className="h-5 w-5" />
-            News Posts ({posts.length})
+          <CardTitle className="flex items-center gap-2 text-3xl">
+            <Newspaper className="h-5 w-5 text-muted-foreground" />
+            News posts <span className="tabular">({posts.length})</span>
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button onClick={handleSyncNews} size="sm" variant="outline" disabled={syncing}>
@@ -230,7 +230,7 @@ export const NewsManager = () => {
             </Button>
             <Button onClick={openNewDialog} size="sm">
               <Plus className="h-4 w-4 mr-1" />
-              New Post
+              New post
             </Button>
           </div>
         </div>
@@ -238,14 +238,14 @@ export const NewsManager = () => {
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
           <TabsList>
-            <TabsTrigger value="all">All ({posts.length})</TabsTrigger>
-            <TabsTrigger value="manual">Manual ({manualCount})</TabsTrigger>
-            <TabsTrigger value="rss">RSS ({rssCount})</TabsTrigger>
+            <TabsTrigger value="all" className="tabular">All ({posts.length})</TabsTrigger>
+            <TabsTrigger value="manual" className="tabular">Manual ({manualCount})</TabsTrigger>
+            <TabsTrigger value="rss" className="tabular">RSS ({rssCount})</TabsTrigger>
           </TabsList>
         </Tabs>
 
         {filteredPosts.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">
+          <p className="text-muted-foreground text-center py-10">
             {activeTab === "all"
               ? "No news posts yet. Create one or sync from RSS."
               : `No ${activeTab} posts found.`}
@@ -254,18 +254,18 @@ export const NewsManager = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Published</TableHead>
-                <TableHead className="text-center">Spoiler</TableHead>
-                <TableHead>Expires</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="label-caps">Title</TableHead>
+                <TableHead className="label-caps">Source</TableHead>
+                <TableHead className="label-caps">Published</TableHead>
+                <TableHead className="label-caps text-center">Spoiler</TableHead>
+                <TableHead className="label-caps">Expires</TableHead>
+                <TableHead className="label-caps text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPosts.map((post) => (
                 <TableRow key={post.id}>
-                  <TableCell className="font-medium max-w-[200px]">
+                  <TableCell className="font-bold max-w-[200px]">
                     <div className="flex items-center gap-2">
                       <span className="truncate">{post.title}</span>
                       {post.source_url && (
@@ -282,15 +282,18 @@ export const NewsManager = () => {
                     </div>
                   </TableCell>
                   <TableCell>{getSourceBadge(post.source)}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground tabular whitespace-nowrap">
                     {format(new Date(post.published_at), "MMM d, yyyy")}
                   </TableCell>
                   <TableCell className="text-center">
                     {post.is_spoiler && (
-                      <AlertTriangle className="h-4 w-4 text-warning mx-auto" />
+                      <>
+                        <AlertTriangle className="h-4 w-4 text-warning mx-auto" aria-hidden="true" />
+                        <span className="sr-only">Spoiler</span>
+                      </>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground tabular whitespace-nowrap">
                     {post.expires_at ? (
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
@@ -305,6 +308,7 @@ export const NewsManager = () => {
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label={`Edit ${post.title}`}
                         onClick={() => openEditDialog(post)}
                       >
                         <Pencil className="h-4 w-4" />
@@ -315,13 +319,14 @@ export const NewsManager = () => {
                             variant="ghost"
                             size="sm"
                             className="text-destructive hover:text-destructive"
+                            aria-label={`Delete ${post.title}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Post</AlertDialogTitle>
+                            <AlertDialogTitle>Delete post</AlertDialogTitle>
                             <AlertDialogDescription>
                               Are you sure you want to delete "{post.title}"? This action cannot be undone.
                             </AlertDialogDescription>
@@ -350,12 +355,12 @@ export const NewsManager = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {editingPost ? "Edit Post" : "Create New Post"}
+                {editingPost ? "Edit post" : "Create new post"}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
+                <Label htmlFor="title" className="label-caps text-muted-foreground">Title *</Label>
                 <Input
                   id="title"
                   value={title}
@@ -365,7 +370,7 @@ export const NewsManager = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="content">Content *</Label>
+                <Label htmlFor="content" className="label-caps text-muted-foreground">Content *</Label>
                 <Textarea
                   id="content"
                   value={content}
@@ -381,14 +386,14 @@ export const NewsManager = () => {
                   checked={isSpoiler}
                   onCheckedChange={(checked) => setIsSpoiler(checked === true)}
                 />
-                <Label htmlFor="spoiler" className="flex items-center gap-2">
+                <Label htmlFor="spoiler" className="flex items-center gap-2 font-semibold">
                   <AlertTriangle className="h-4 w-4 text-warning" />
-                  Contains Spoilers
+                  Contains spoilers
                 </Label>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="expires">Expires At (optional)</Label>
+                <Label htmlFor="expires" className="label-caps text-muted-foreground">Expires at (optional)</Label>
                 <Input
                   id="expires"
                   type="date"
@@ -405,7 +410,7 @@ export const NewsManager = () => {
                 Cancel
               </Button>
               <Button onClick={handleSave}>
-                {editingPost ? "Save Changes" : "Create Post"}
+                {editingPost ? "Save changes" : "Create post"}
               </Button>
             </DialogFooter>
           </DialogContent>

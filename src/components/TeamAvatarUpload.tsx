@@ -113,9 +113,10 @@ export function TeamAvatarUpload({
         type="button"
         size="icon"
         variant="secondary"
-        className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-md"
+        className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full border-b-2"
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
+        aria-label="Change team photo"
       >
         {uploading ? (
           <Loader2 className="h-4 w-4 animate-spin" />

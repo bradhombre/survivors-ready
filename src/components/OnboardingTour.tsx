@@ -18,19 +18,19 @@ interface OnboardingTourProps {
 const PLAYER_STEPS: TourStep[] = [
   {
     target: "play",
-    title: "Play Tab 🏆",
+    title: "Play tab",
     description:
       "This is where your fantasy game lives. During the draft, you'll pick Survivor contestants for your team. Once the game starts, your commissioner scores events each episode.",
   },
   {
     target: "league",
-    title: "League Tab 👥",
+    title: "League tab",
     description:
       "See who's in your league, customize your team name and avatar, and share the invite code with friends.",
   },
   {
     target: "chat",
-    title: "League Chat 💬",
+    title: "League chat",
     description:
       "Chat with your league mates and ask @jeffbot any Survivor question — trivia, strategy, history.",
   },
@@ -38,7 +38,7 @@ const PLAYER_STEPS: TourStep[] = [
 
 const ADMIN_STEP: TourStep = {
   target: "admin",
-  title: "Admin Tab 🛡️",
+  title: "Admin tab",
   description:
     "Manage your cast, scoring settings, and league configuration. You'll use this to score events during each episode.",
 };
@@ -105,10 +105,22 @@ export function OnboardingTour({ leagueId, isLeagueAdmin, isSuperAdmin }: Onboar
   const step = steps[stepIndex];
   const padding = 6;
 
-  // Position popover below or above target
-  const popoverTop = rect.bottom + 12;
-  const popoverLeft = Math.max(12, Math.min(rect.left, window.innerWidth - 320));
-  const fitsBelow = popoverTop + 200 < window.innerHeight;
+  // Position popover below the target, or above it when the target sits in the
+  // lower half of the viewport (e.g. a bottom tab bar on phones). Clamp inside
+  // the viewport with 16px margins.
+  const margin = 16;
+  const gap = 12;
+  const viewportW = window.innerWidth;
+  const viewportH = window.innerHeight;
+  const popoverWidth = Math.min(300, viewportW - margin * 2);
+  const placeAbove = rect.top + rect.height / 2 > viewportH / 2;
+  const popoverLeft = Math.max(margin, Math.min(rect.left, viewportW - popoverWidth - margin));
+  const popoverTop = Math.max(margin, rect.bottom + gap);
+  const popoverBottom = Math.max(margin, viewportH - rect.top + gap);
+  const popoverMaxHeight = Math.max(
+    120,
+    placeAbove ? viewportH - popoverBottom - margin : viewportH - popoverTop - margin
+  );
 
   return createPortal(
     <div className="fixed inset-0 z-[100]" onClick={finish}>
@@ -131,7 +143,7 @@ export function OnboardingTour({ leagueId, isLeagueAdmin, isSuperAdmin }: Onboar
 
       {/* Highlight ring */}
       <div
-        className="absolute rounded-lg ring-2 ring-primary/80 ring-offset-2 ring-offset-transparent pointer-events-none transition-all duration-300"
+        className="absolute rounded-[14px] ring-[3px] ring-accent ring-offset-2 ring-offset-transparent pointer-events-none transition-all duration-300"
         style={{
           top: rect.top - padding,
           left: rect.left - padding,
@@ -143,39 +155,41 @@ export function OnboardingTour({ leagueId, isLeagueAdmin, isSuperAdmin }: Onboar
       {/* Popover */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="absolute w-[300px] bg-popover border border-border rounded-lg shadow-xl p-4 transition-all duration-300 animate-in fade-in-0 zoom-in-95"
+        className="plank absolute overflow-y-auto p-4 shadow-md transition-all duration-300 animate-in fade-in-0 zoom-in-95"
         style={{
-          top: fitsBelow ? popoverTop : rect.top - 12,
+          width: popoverWidth,
           left: popoverLeft,
-          ...(fitsBelow ? {} : { transform: "translateY(-100%)" }),
+          maxHeight: popoverMaxHeight,
+          ...(placeAbove ? { bottom: popoverBottom } : { top: popoverTop }),
         }}
       >
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-semibold text-sm">{step.title}</h3>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="min-w-0 space-y-1.5">
+            <p className="label-caps text-muted-foreground tabular">
+              Step {stepIndex + 1} of {steps.length}
+            </p>
+            <h3 className="font-display text-2xl leading-none">{step.title}</h3>
+          </div>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={finish}
-            className="h-6 w-6 p-0 -mt-1 -mr-1 text-muted-foreground"
+            className="h-10 w-10 shrink-0 -mt-2 -mr-2 text-muted-foreground"
+            aria-label="Close tour"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
         <p className="text-sm text-muted-foreground mb-4">{step.description}</p>
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            {stepIndex + 1} of {steps.length}
-          </span>
-          <div className="flex gap-2">
-            {stepIndex > 0 && (
-              <Button variant="ghost" size="sm" onClick={back}>
-                Back
-              </Button>
-            )}
-            <Button size="sm" onClick={next}>
-              {stepIndex === steps.length - 1 ? "Done" : "Next"}
+        <div className="flex items-center justify-end gap-2">
+          {stepIndex > 0 && (
+            <Button variant="ghost" onClick={back}>
+              Back
             </Button>
-          </div>
+          )}
+          <Button variant="accent" onClick={next}>
+            {stepIndex === steps.length - 1 ? "Done" : "Next"}
+          </Button>
         </div>
       </div>
     </div>,

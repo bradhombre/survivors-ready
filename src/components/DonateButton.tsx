@@ -12,12 +12,12 @@ export function DonateButton() {
     <Button
       variant="ghost"
       size="sm"
-      className="text-muted-foreground hover:text-foreground gap-2"
+      className="h-8 gap-1.5 px-2 text-xs font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground [&_svg]:size-3"
       asChild
     >
       <a href={donateUrl} target="_blank" rel="noopener noreferrer">
-        <Heart className="h-4 w-4" />
-        Buy Me a Coffee ☕
+        <Heart className="h-3 w-3" aria-hidden="true" />
+        Buy me a coffee
       </a>
     </Button>
   );

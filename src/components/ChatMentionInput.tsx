@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Bot } from "lucide-react";
 
 export interface MentionableUser {
   id: string;
@@ -199,7 +200,7 @@ export function ChatMentionInput({
       {showSuggestions && filteredUsers.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto z-50"
+          className="absolute bottom-full left-0 right-0 mb-2 bg-popover border-2 border-plank rounded-[12px] shadow-md max-h-48 overflow-y-auto z-50 py-1"
         >
           {filteredUsers.map((user, index) => (
             <button
@@ -207,23 +208,23 @@ export function ChatMentionInput({
               type="button"
               onClick={() => selectMention(user)}
               className={cn(
-                "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-accent transition-colors",
-                index === selectedIndex && "bg-accent"
+                "w-full min-h-[44px] px-3 py-2 text-left text-sm font-bold flex items-center gap-2 hover:bg-muted transition-colors",
+                index === selectedIndex && "bg-muted"
               )}
             >
               {user.isBot ? (
-                <span className="text-base">🤖</span>
+                <Bot className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
               ) : (
                 <span
                   className={cn(
-                    "h-2 w-2 rounded-full",
-                    user.isOnline ? "bg-emerald-500" : "bg-muted-foreground/30"
+                    "h-2.5 w-2.5 shrink-0 rounded-full",
+                    user.isOnline ? "bg-success" : "border-[1.5px] border-input"
                   )}
                 />
               )}
               <span className="truncate">{user.name}</span>
               {user.isOnline && !user.isBot && (
-                <span className="text-xs text-muted-foreground ml-auto">online</span>
+                <span className="text-xs font-semibold text-success ml-auto">online</span>
               )}
             </button>
           ))}

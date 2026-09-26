@@ -679,34 +679,35 @@ export function CastManager() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Master Cast Management
+        <CardTitle className="flex items-center gap-2 text-3xl">
+          <Users className="h-5 w-5 text-muted-foreground" />
+          Master cast management
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Season Selector */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <Label htmlFor="season-select">Season:</Label>
+            <Label htmlFor="season-select" className="label-caps text-muted-foreground">Season</Label>
             <Input
               id="season-select"
               type="number"
               value={season}
               onChange={(e) => setSeason(parseInt(e.target.value) || 1)}
-              className="w-24"
+              className="w-24 tabular"
               min={1}
             />
           </div>
 
           {existingSeasons.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">Quick select:</span>
+              <span className="label-caps text-muted-foreground">Quick select</span>
               {existingSeasons.slice(0, 5).map((s) => (
                 <Button
                   key={s}
                   variant={s === season ? "default" : "outline"}
                   size="sm"
+                  className="rounded-full tabular"
                   onClick={() => setSeason(s)}
                 >
                   S{s}
@@ -715,33 +716,23 @@ export function CastManager() {
             </div>
           )}
 
-          <div className="flex gap-2 ml-auto flex-wrap">
-            {contestants.length > 0 && (
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={() => setShowDeleteAllDialog(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete All
-              </Button>
-            )}
+          <div className="flex gap-2 w-full flex-wrap lg:w-auto lg:ml-auto">
             <Button onClick={handleWikiImport} size="sm" variant="secondary" disabled={isWikiImporting}>
               {isWikiImporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileUp className="h-4 w-4 mr-1" />}
               Import cast from wiki
             </Button>
             <Button onClick={() => setShowAddDialog(true)} size="sm">
               <Plus className="h-4 w-4 mr-1" />
-              Add Contestant
+              Add contestant
             </Button>
             <Button onClick={() => setShowBulkDialog(true)} variant="outline" size="sm">
               <Upload className="h-4 w-4 mr-1" />
-              Bulk Import
+              Bulk import
             </Button>
             <Button variant="outline" size="sm" asChild>
               <label htmlFor="csv-file-import" className="cursor-pointer">
                 <FileUp className="h-4 w-4 mr-1" />
-                CSV Import
+                CSV import
                 <input
                   id="csv-file-import"
                   type="file"
@@ -759,7 +750,7 @@ export function CastManager() {
                 disabled={isFetchingImages || missingImagesCount === 0}
               >
                 <ImageIcon className="h-4 w-4 mr-1" />
-                Fetch Images {missingImagesCount > 0 && `(${missingImagesCount} missing)`}
+                Fetch images {missingImagesCount > 0 && <span className="tabular">({missingImagesCount} missing)</span>}
               </Button>
             )}
           </div>
@@ -770,29 +761,29 @@ export function CastManager() {
           <p className="text-muted-foreground text-center py-8">Loading...</p>
         ) : contestants.length === 0 ? (
           <div className="text-center py-12 space-y-4">
-            <p className="text-muted-foreground">No cast added yet for Season {season}</p>
-            <div className="flex justify-center gap-2">
+            <p className="font-display text-2xl leading-none">No cast added yet for Season <span className="tabular">{season}</span></p>
+            <div className="flex flex-wrap justify-center gap-2">
               <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4 mr-1" />
-                Add Contestant
+                Add contestant
               </Button>
               <Button onClick={() => setShowBulkDialog(true)} variant="outline">
                 <Upload className="h-4 w-4 mr-1" />
-                Bulk Import
+                Bulk import
               </Button>
             </div>
           </div>
         ) : (
-          <div className="border rounded-lg">
+          <div className="glass rounded-[12px] overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Tribe</TableHead>
-                  <TableHead className="text-center">Age</TableHead>
-                  <TableHead>Occupation</TableHead>
-                  <TableHead>Image URL</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="label-caps">Name</TableHead>
+                  <TableHead className="label-caps">Tribe</TableHead>
+                  <TableHead className="label-caps text-center">Age</TableHead>
+                  <TableHead className="label-caps">Occupation</TableHead>
+                  <TableHead className="label-caps">Image URL</TableHead>
+                  <TableHead className="label-caps text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -805,7 +796,7 @@ export function CastManager() {
                           onChange={(e) =>
                             setFormData({ ...formData, name: e.target.value })
                           }
-                          className="h-8"
+                          className="h-9"
                         />
                       </TableCell>
                       <TableCell>
@@ -814,7 +805,7 @@ export function CastManager() {
                           onChange={(e) =>
                             setFormData({ ...formData, tribe: e.target.value })
                           }
-                          className="h-8"
+                          className="h-9"
                         />
                       </TableCell>
                       <TableCell>
@@ -824,7 +815,7 @@ export function CastManager() {
                           onChange={(e) =>
                             setFormData({ ...formData, age: e.target.value })
                           }
-                          className="h-8 w-16"
+                          className="h-9 w-16 tabular"
                         />
                       </TableCell>
                       <TableCell>
@@ -833,7 +824,7 @@ export function CastManager() {
                           onChange={(e) =>
                             setFormData({ ...formData, occupation: e.target.value })
                           }
-                          className="h-8"
+                          className="h-9"
                         />
                       </TableCell>
                       <TableCell>
@@ -842,7 +833,7 @@ export function CastManager() {
                           onChange={(e) =>
                             setFormData({ ...formData, image_url: e.target.value })
                           }
-                          className="h-8"
+                          className="h-9"
                           placeholder="https://..."
                         />
                       </TableCell>
@@ -853,6 +844,7 @@ export function CastManager() {
                             variant="ghost"
                             onClick={() => handleUpdateContestant(c.id)}
                             disabled={isSaving}
+                            aria-label="Save changes"
                           >
                             <Check className="h-4 w-4" />
                           </Button>
@@ -860,6 +852,7 @@ export function CastManager() {
                             size="sm"
                             variant="ghost"
                             onClick={cancelEditing}
+                            aria-label="Cancel editing"
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -868,11 +861,11 @@ export function CastManager() {
                     </TableRow>
                   ) : (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell className="font-bold">{c.name}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {c.tribe || "—"}
                       </TableCell>
-                      <TableCell className="text-center text-muted-foreground">
+                      <TableCell className="text-center text-muted-foreground tabular">
                         {c.age || "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
@@ -885,7 +878,7 @@ export function CastManager() {
                               href={c.image_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary underline truncate max-w-[100px]"
+                              className="font-semibold text-primary underline truncate max-w-[100px]"
                             >
                               View
                             </a>
@@ -895,10 +888,11 @@ export function CastManager() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-6 w-6 p-0"
+                            className="h-8 w-8 p-0"
                             onClick={() => handleFetchSingleImage(c.id, c.name)}
                             disabled={fetchingContestantId === c.id}
                             title="Fetch image"
+                            aria-label={`Fetch image for ${c.name}`}
                           >
                             {fetchingContestantId === c.id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -914,6 +908,7 @@ export function CastManager() {
                             size="sm"
                             variant="ghost"
                             onClick={() => startEditing(c)}
+                            aria-label={`Edit ${c.name}`}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -923,13 +918,14 @@ export function CastManager() {
                                 size="sm"
                                 variant="ghost"
                                 className="text-destructive hover:text-destructive"
+                                aria-label={`Delete ${c.name}`}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Contestant</AlertDialogTitle>
+                                <AlertDialogTitle>Delete contestant</AlertDialogTitle>
                                 <AlertDialogDescription>
                                   Are you sure you want to delete {c.name}? This action
                                   cannot be undone.
@@ -956,10 +952,33 @@ export function CastManager() {
           </div>
         )}
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground tabular">
           {contestants.length} contestant{contestants.length !== 1 ? "s" : ""} for Season{" "}
           {season}
         </p>
+
+        {/* Danger zone */}
+        {contestants.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border-2 border-accent bg-accent/10 px-4 py-3">
+            <div className="space-y-0.5">
+              <p className="label-caps flex items-center gap-1.5 text-destructive">
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                Danger zone
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Delete all contestants for Season <span className="tabular">{season}</span>
+              </p>
+            </div>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={() => setShowDeleteAllDialog(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete all
+            </Button>
+          </div>
+        )}
 
         {/* Delete All Confirmation Dialog */}
         <AlertDialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
@@ -967,7 +986,7 @@ export function CastManager() {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-destructive" />
-                Delete All Contestants
+                Delete all contestants
               </AlertDialogTitle>
               <AlertDialogDescription>
                 Are you sure you want to delete all <strong>{contestants.length}</strong> contestants for Season {season}? 
@@ -981,7 +1000,7 @@ export function CastManager() {
                 disabled={isDeleting}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {isDeleting ? "Deleting..." : `Delete All ${contestants.length}`}
+                {isDeleting ? "Deleting..." : `Delete all ${contestants.length}`}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -991,7 +1010,7 @@ export function CastManager() {
         <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
-              <DialogTitle>CSV Import Preview - Season {season}</DialogTitle>
+              <DialogTitle>CSV import preview · Season {season}</DialogTitle>
               <DialogDescription>
                 Review the parsed data before importing
               </DialogDescription>
@@ -1006,8 +1025,8 @@ export function CastManager() {
                     <span className="text-sm text-muted-foreground">{getMappingDisplay()}</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning/30 rounded-lg">
-                    <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                  <div className="flex items-center gap-2 rounded-[12px] border-2 border-accent bg-accent/10 px-4 py-3">
+                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
                     <span className="text-sm">
                       No recognizable headers found. Using positional mapping (name, tribe, age, occupation, image_url).
                     </span>
@@ -1016,41 +1035,46 @@ export function CastManager() {
               </div>
 
               {/* Preview table */}
-              <div className="border rounded-lg overflow-auto flex-1">
+              <div className="glass rounded-[12px] overflow-auto flex-1">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-8">#</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Tribe</TableHead>
-                      <TableHead>Age</TableHead>
-                      <TableHead>Occupation</TableHead>
-                      <TableHead>Image</TableHead>
+                      <TableHead className="label-caps w-8">#</TableHead>
+                      <TableHead className="label-caps">Name</TableHead>
+                      <TableHead className="label-caps">Tribe</TableHead>
+                      <TableHead className="label-caps">Age</TableHead>
+                      <TableHead className="label-caps">Occupation</TableHead>
+                      <TableHead className="label-caps">Image</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {previewData.slice(0, 10).map((c, i) => (
                       <TableRow key={i}>
-                        <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                        <TableCell className="font-medium">{c.name}</TableCell>
+                        <TableCell className="text-muted-foreground tabular">{i + 1}</TableCell>
+                        <TableCell className="font-bold">{c.name}</TableCell>
                         <TableCell className="text-muted-foreground">{c.tribe || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground">{c.age || "—"}</TableCell>
+                        <TableCell className="text-muted-foreground tabular">{c.age || "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{c.occupation || "—"}</TableCell>
                         <TableCell className="text-muted-foreground max-w-[100px] truncate">
-                          {c.image_url ? "✓" : "—"}
+                          {c.image_url ? (
+                            <>
+                              <Check className="h-4 w-4 text-success" aria-hidden="true" />
+                              <span className="sr-only">Has image</span>
+                            </>
+                          ) : "—"}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
                 {previewData.length > 10 && (
-                  <p className="text-sm text-muted-foreground p-3 text-center border-t">
+                  <p className="text-sm text-muted-foreground tabular p-3 text-center border-t border-border">
                     ... and {previewData.length - 10} more
                   </p>
                 )}
               </div>
 
-              <p className="text-sm font-medium">
+              <p className="text-sm font-bold tabular">
                 Ready to import {previewData.length} contestant{previewData.length !== 1 ? "s" : ""}
               </p>
             </div>
@@ -1060,7 +1084,7 @@ export function CastManager() {
                 Cancel
               </Button>
               <Button onClick={handleConfirmImport} disabled={isSaving}>
-                {isSaving ? "Importing..." : `Import All ${previewData.length}`}
+                {isSaving ? "Importing..." : `Import all ${previewData.length}`}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1070,11 +1094,11 @@ export function CastManager() {
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Contestant to Season {season}</DialogTitle>
+              <DialogTitle>Add contestant to Season {season}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="add-name">Name *</Label>
+              <div className="space-y-2">
+                <Label htmlFor="add-name" className="label-caps text-muted-foreground">Name *</Label>
                 <Input
                   id="add-name"
                   value={formData.name}
@@ -1083,8 +1107,8 @@ export function CastManager() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="add-tribe">Tribe</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="add-tribe" className="label-caps text-muted-foreground">Tribe</Label>
                   <Input
                     id="add-tribe"
                     value={formData.tribe}
@@ -1094,8 +1118,8 @@ export function CastManager() {
                     placeholder="Tribe name"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="add-age">Age</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="add-age" className="label-caps text-muted-foreground">Age</Label>
                   <Input
                     id="add-age"
                     type="number"
@@ -1105,8 +1129,8 @@ export function CastManager() {
                   />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="add-occupation">Occupation</Label>
+              <div className="space-y-2">
+                <Label htmlFor="add-occupation" className="label-caps text-muted-foreground">Occupation</Label>
                 <Input
                   id="add-occupation"
                   value={formData.occupation}
@@ -1116,8 +1140,8 @@ export function CastManager() {
                   placeholder="Occupation"
                 />
               </div>
-              <div>
-                <Label htmlFor="add-image">Image URL</Label>
+              <div className="space-y-2">
+                <Label htmlFor="add-image" className="label-caps text-muted-foreground">Image URL</Label>
                 <Input
                   id="add-image"
                   value={formData.image_url}
@@ -1133,7 +1157,7 @@ export function CastManager() {
                 Cancel
               </Button>
               <Button onClick={handleAddContestant} disabled={isSaving}>
-                {isSaving ? "Adding..." : "Add Contestant"}
+                {isSaving ? "Adding..." : "Add contestant"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1143,7 +1167,7 @@ export function CastManager() {
         <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Bulk Import Cast for Season {season}</DialogTitle>
+              <DialogTitle>Bulk import cast for Season {season}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -1162,7 +1186,7 @@ export function CastManager() {
                 Cancel
               </Button>
               <Button onClick={handleBulkImport} disabled={isSaving || !bulkText.trim()}>
-                {isSaving ? "Importing..." : "Import All"}
+                {isSaving ? "Importing..." : "Import all"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1175,8 +1199,8 @@ export function CastManager() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <ImageIcon className="h-5 w-5" />
-                Fetching Cast Images
+                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                Fetching cast images
               </DialogTitle>
               <DialogDescription>
                 Searching for official headshots using AI...
@@ -1188,42 +1212,42 @@ export function CastManager() {
                 <>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>Progress</span>
-                      <span>{fetchProgress.current} / {fetchProgress.total}</span>
+                      <span className="label-caps text-muted-foreground">Progress</span>
+                      <span className="font-bold tabular">{fetchProgress.current} / {fetchProgress.total}</span>
                     </div>
                     <Progress value={(fetchProgress.current / Math.max(fetchProgress.total, 1)) * 100} />
                   </div>
                   
                   {fetchProgress.currentName && (
                     <p className="text-sm text-muted-foreground">
-                      Current: <span className="font-medium">{fetchProgress.currentName}</span>
+                      Current: <span className="font-bold text-foreground">{fetchProgress.currentName}</span>
                     </p>
                   )}
                   
                   <div className="flex gap-4 text-sm">
-                    <span className="text-primary">
-                      ✅ Found: {fetchResults.found}
+                    <span className="inline-flex items-center gap-1 font-bold text-success tabular">
+                      <Check className="h-4 w-4" aria-hidden="true" /> Found: {fetchResults.found}
                     </span>
-                    <span className="text-muted-foreground">
-                      ❌ Not found: {fetchResults.notFound}
+                    <span className="inline-flex items-center gap-1 font-semibold text-muted-foreground tabular">
+                      <X className="h-4 w-4" aria-hidden="true" /> Not found: {fetchResults.notFound}
                     </span>
                   </div>
                 </>
               ) : (
                 <div className="space-y-4">
                   <div className="flex gap-4 text-sm">
-                    <span className="text-primary">
-                      ✅ Found: {fetchResults.found}
+                    <span className="inline-flex items-center gap-1 font-bold text-success tabular">
+                      <Check className="h-4 w-4" aria-hidden="true" /> Found: {fetchResults.found}
                     </span>
-                    <span className="text-muted-foreground">
-                      ❌ Not found: {fetchResults.notFound}
+                    <span className="inline-flex items-center gap-1 font-semibold text-muted-foreground tabular">
+                      <X className="h-4 w-4" aria-hidden="true" /> Not found: {fetchResults.notFound}
                     </span>
                   </div>
                   
                   {fetchResults.failed.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Failed contestants:</p>
-                      <div className="max-h-32 overflow-auto text-sm text-muted-foreground bg-muted/50 rounded p-2">
+                      <p className="label-caps text-muted-foreground">Failed contestants</p>
+                      <div className="glass max-h-32 overflow-auto rounded-[10px] p-2 text-sm text-muted-foreground">
                         {fetchResults.failed.map((name, i) => (
                           <div key={i}>{name}</div>
                         ))}

@@ -7,7 +7,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, formatDistanceToNow } from "date-fns";
 import { Users, Gamepad2, MessageSquare, Trophy, Copy, ExternalLink } from "lucide-react";
@@ -193,12 +192,15 @@ export function LeagueDetailSheet({ leagueId, open, onOpenChange }: LeagueDetail
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg">
         <SheetHeader>
-          <div className="flex items-center justify-between pr-6">
-            <SheetTitle>{detail?.name || "League Details"}</SheetTitle>
+          <div className="flex items-start justify-between gap-3 pr-6">
+            <div className="min-w-0 space-y-1 text-left">
+              <p className="label-caps text-muted-foreground">League</p>
+              <SheetTitle className="font-display text-3xl leading-none break-words">{detail?.name || "League details"}</SheetTitle>
+            </div>
             {detail && (
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="outline" size="sm" className="shrink-0" asChild>
                 <a href={`/league/${detail.id}`} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4 mr-1" /> Visit League
+                  <ExternalLink className="h-4 w-4 mr-1" /> Visit league
                 </a>
               </Button>
             )}
@@ -208,56 +210,54 @@ export function LeagueDetailSheet({ leagueId, open, onOpenChange }: LeagueDetail
         {loading ? (
           <p className="text-muted-foreground text-center py-8">Loading...</p>
         ) : detail ? (
-          <ScrollArea className="h-[calc(100vh-5rem)] pr-4">
-            <div className="space-y-6 pb-8">
+          <ScrollArea className="h-[calc(100vh-7rem)] pr-4">
+            <div className="space-y-4 pt-4 pb-8">
               {/* Overview */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Owner</span>
-                  <span className="text-sm">{detail.owner_email}</span>
+              <div className="glass rounded-[12px] px-4 py-1 divide-y divide-border">
+                <div className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="label-caps text-muted-foreground">Owner</span>
+                  <span className="text-sm font-semibold truncate">{detail.owner_email}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Invite Code</span>
-                  <button onClick={copyInviteCode} className="flex items-center gap-1 text-sm font-mono hover:text-primary transition-colors">
-                    {detail.invite_code} <Copy className="h-3 w-3" />
+                <div className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="label-caps text-muted-foreground">Invite code</span>
+                  <button onClick={copyInviteCode} className="flex min-h-[32px] items-center gap-1.5 text-sm font-mono font-bold tracking-widest hover:text-primary transition-colors">
+                    {detail.invite_code} <Copy className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Created</span>
-                  <span className="text-sm">{detail.created_at ? format(new Date(detail.created_at), "MMM d, yyyy") : "—"}</span>
+                <div className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="label-caps text-muted-foreground">Created</span>
+                  <span className="text-sm font-semibold tabular">{detail.created_at ? format(new Date(detail.created_at), "MMM d, yyyy") : "—"}</span>
                 </div>
                 {detail.last_activity_at && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Last Activity</span>
-                    <span className="text-sm">{formatDistanceToNow(new Date(detail.last_activity_at), { addSuffix: true })}</span>
+                  <div className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="label-caps text-muted-foreground">Last activity</span>
+                    <span className="text-sm font-semibold">{formatDistanceToNow(new Date(detail.last_activity_at), { addSuffix: true })}</span>
                   </div>
                 )}
               </div>
 
-              <Separator />
-
               {/* Game State */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Gamepad2 className="h-4 w-4" /> Game State
+              <div className="glass rounded-[12px] p-4 space-y-3">
+                <h4 className="label-caps text-muted-foreground flex items-center gap-2">
+                  <Gamepad2 className="h-4 w-4" /> Game state
                 </h4>
                 {detail.session ? (
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Mode:</span>{" "}
                       <Badge variant="outline" className="capitalize">{detail.session.mode}</Badge>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Season:</span> {detail.session.season}
+                      <span className="text-muted-foreground">Season:</span> <span className="font-bold tabular">{detail.session.season}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Episode:</span> {detail.session.episode}
+                      <span className="text-muted-foreground">Episode:</span> <span className="font-bold tabular">{detail.session.episode}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Draft:</span> {detail.session.draft_type}
+                      <span className="text-muted-foreground">Draft:</span> <span className="font-semibold">{detail.session.draft_type}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Type:</span> {detail.session.game_type}
+                      <span className="text-muted-foreground">Type:</span> <span className="font-semibold">{detail.session.game_type}</span>
                     </div>
                   </div>
                 ) : (
@@ -265,21 +265,19 @@ export function LeagueDetailSheet({ leagueId, open, onOpenChange }: LeagueDetail
                 )}
               </div>
 
-              <Separator />
-
               {/* Members */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Users className="h-4 w-4" /> Members ({detail.members.length})
+              <div className="glass rounded-[12px] p-4 space-y-2">
+                <h4 className="label-caps text-muted-foreground flex items-center gap-2">
+                  <Users className="h-4 w-4" /> Members <span className="tabular">({detail.members.length})</span>
                 </h4>
-                <div className="space-y-1">
+                <div className="divide-y divide-border">
                   {detail.members.map(m => (
-                    <div key={m.user_id} className="flex items-center justify-between text-sm py-1">
-                      <div>
-                        <span>{m.display_name || m.email}</span>
+                    <div key={m.user_id} className="flex items-center justify-between gap-3 text-sm py-2">
+                      <div className="min-w-0">
+                        <span className="font-semibold">{m.display_name || m.email}</span>
                         {m.team_name && <span className="text-muted-foreground ml-2">({m.team_name})</span>}
                       </div>
-                      <Badge variant={m.role === "league_admin" || m.role === "super_admin" ? "default" : "secondary"} className="text-xs">
+                      <Badge variant={m.role === "league_admin" || m.role === "super_admin" ? "default" : "secondary"} className="text-xs shrink-0">
                         {m.role.replace("_", " ")}
                       </Badge>
                     </div>
@@ -287,19 +285,20 @@ export function LeagueDetailSheet({ leagueId, open, onOpenChange }: LeagueDetail
                 </div>
               </div>
 
-              <Separator />
-
               {/* Draft Status */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Trophy className="h-4 w-4" /> Contestants ({pickedCount}/{totalCount} drafted, {eliminatedCount} eliminated)
+              <div className="glass rounded-[12px] p-4 space-y-3">
+                <h4 className="label-caps text-muted-foreground flex items-center gap-2">
+                  <Trophy className="h-4 w-4" /> Contestants
                 </h4>
+                <p className="text-sm text-muted-foreground tabular">
+                  <span className="font-bold text-foreground">{pickedCount}/{totalCount}</span> drafted, <span className="font-bold text-foreground">{eliminatedCount}</span> eliminated
+                </p>
                 {detail.contestants.length > 0 ? (
                   <div className="grid grid-cols-2 gap-1">
                     {detail.contestants.map(c => (
-                      <div key={c.name} className={`text-xs py-1 px-2 rounded ${c.is_eliminated ? "line-through text-muted-foreground" : ""}`}>
+                      <div key={c.name} className={`text-xs py-1 px-2 rounded-[8px] ${c.is_eliminated ? "line-through text-muted-foreground" : "font-semibold"}`}>
                         {c.name}
-                        {c.owner && <span className="text-muted-foreground ml-1">→ {c.owner}</span>}
+                        {c.owner && <span className="font-normal text-muted-foreground ml-1">→ {c.owner}</span>}
                       </div>
                     ))}
                   </div>
@@ -308,18 +307,16 @@ export function LeagueDetailSheet({ leagueId, open, onOpenChange }: LeagueDetail
                 )}
               </div>
 
-              <Separator />
-
               {/* Recent Chat */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" /> Recent Chat ({detail.recentMessages.length})
+              <div className="glass rounded-[12px] p-4 space-y-3">
+                <h4 className="label-caps text-muted-foreground flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" /> Recent chat <span className="tabular">({detail.recentMessages.length})</span>
                 </h4>
                 {detail.recentMessages.length > 0 ? (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {detail.recentMessages.map((msg, i) => (
                       <div key={i} className="text-xs">
-                        <span className={`font-medium ${msg.is_bot ? "text-primary" : ""}`}>{msg.user_email}:</span>{" "}
+                        <span className={`font-bold ${msg.is_bot ? "text-primary" : ""}`}>{msg.user_email}:</span>{" "}
                         <span className="text-muted-foreground">{msg.content.slice(0, 120)}{msg.content.length > 120 ? "..." : ""}</span>
                       </div>
                     ))}
@@ -329,12 +326,10 @@ export function LeagueDetailSheet({ leagueId, open, onOpenChange }: LeagueDetail
                 )}
               </div>
 
-              <Separator />
-
               {/* Scoring */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">Total Scoring Events</span>
-                <Badge variant="outline">{detail.scoringEventsCount}</Badge>
+              <div className="glass rounded-[12px] flex items-center justify-between gap-3 px-4 py-3">
+                <span className="label-caps text-muted-foreground">Total scoring events</span>
+                <span className="text-2xl font-black tabular">{detail.scoringEventsCount}</span>
               </div>
             </div>
           </ScrollArea>

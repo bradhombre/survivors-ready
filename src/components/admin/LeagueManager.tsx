@@ -43,9 +43,9 @@ function getStatus(lastActivity: string | null): "active" | "inactive" | "abando
 }
 
 const statusColors: Record<string, string> = {
-  active: "bg-green-500/20 text-green-400 border-green-500/30",
-  inactive: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  abandoned: "bg-red-500/20 text-red-400 border-red-500/30",
+  active: "bg-success text-success-foreground border-transparent",
+  inactive: "bg-muted text-foreground border-border",
+  abandoned: "bg-destructive text-destructive-foreground border-transparent",
 };
 
 export function LeagueManager() {
@@ -188,7 +188,7 @@ export function LeagueManager() {
   }), [leagues]);
 
   const SortHeader = ({ label, sortKeyVal }: { label: string; sortKeyVal: SortKey }) => (
-    <button onClick={() => toggleSort(sortKeyVal)} className="flex items-center gap-1 hover:text-foreground transition-colors">
+    <button onClick={() => toggleSort(sortKeyVal)} className="label-caps flex items-center gap-1 hover:text-foreground transition-colors">
       {label} <ArrowUpDown className="h-3 w-3" />
     </button>
   );
@@ -197,9 +197,9 @@ export function LeagueManager() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            All Leagues ({leagues.length})
+          <CardTitle className="flex items-center gap-2 text-3xl">
+            <Users className="h-5 w-5 text-muted-foreground" />
+            All leagues <span className="tabular">({leagues.length})</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -210,30 +210,31 @@ export function LeagueManager() {
                 key={f}
                 variant={filter === f ? "default" : "outline"}
                 size="sm"
+                className="rounded-full tabular"
                 onClick={() => setFilter(f)}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)} ({counts[f]})
               </Button>
             ))}
-            <div className="relative ml-auto">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="relative w-full sm:w-auto sm:ml-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search leagues..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-9 w-60"
+                className="pl-9 w-full sm:w-60"
               />
             </div>
           </div>
 
           {/* Bulk actions */}
           {selected.size > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">{selected.size} selected</span>
+            <div className="flex flex-wrap items-center gap-3 rounded-[12px] border-2 border-accent bg-accent/10 px-4 py-2">
+              <span className="text-sm font-bold tabular">{selected.size} selected</span>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm">
-                    <Trash2 className="h-4 w-4 mr-1" /> Delete Selected
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete selected
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -246,7 +247,7 @@ export function LeagueManager() {
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Delete All
+                      Delete all
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -257,7 +258,7 @@ export function LeagueManager() {
           {loading ? (
             <p className="text-muted-foreground text-center py-8">Loading...</p>
           ) : filtered.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No leagues found.</p>
+            <p className="font-display text-2xl leading-none text-muted-foreground text-center py-10">No leagues found</p>
           ) : (
             <Table>
               <TableHeader>
@@ -272,13 +273,13 @@ export function LeagueManager() {
                     />
                   </TableHead>
                   <TableHead><SortHeader label="Name" sortKeyVal="name" /></TableHead>
-                  <TableHead>Owner</TableHead>
+                  <TableHead className="label-caps">Owner</TableHead>
                   <TableHead className="text-center"><SortHeader label="Members" sortKeyVal="member_count" /></TableHead>
                   <TableHead><SortHeader label="Mode" sortKeyVal="mode" /></TableHead>
-                  <TableHead>Draft</TableHead>
-                  <TableHead><SortHeader label="Last Activity" sortKeyVal="last_activity_at" /></TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="label-caps">Draft</TableHead>
+                  <TableHead><SortHeader label="Last activity" sortKeyVal="last_activity_at" /></TableHead>
+                  <TableHead className="label-caps">Status</TableHead>
+                  <TableHead className="label-caps text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -296,15 +297,15 @@ export function LeagueManager() {
                           }}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{league.name}</TableCell>
+                      <TableCell className="font-bold">{league.name}</TableCell>
                       <TableCell className="text-muted-foreground text-xs">{league.owner_email}</TableCell>
-                      <TableCell className="text-center">{league.member_count}</TableCell>
+                      <TableCell className="text-center font-extrabold tabular">{league.member_count}</TableCell>
                       <TableCell>
                         {league.mode ? (
                           <Badge variant="outline" className="capitalize text-xs">{league.mode}</Badge>
                         ) : "—"}
                       </TableCell>
-                      <TableCell className="text-xs">
+                      <TableCell className="text-xs font-semibold tabular">
                         {league.draft_total > 0 ? `${league.draft_picked}/${league.draft_total}` : "—"}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
@@ -313,7 +314,7 @@ export function LeagueManager() {
                           : "Never"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`text-xs ${statusColors[status]}`}>
+                        <Badge variant="outline" className={`capitalize text-xs ${statusColors[status]}`}>
                           {status}
                         </Badge>
                       </TableCell>
@@ -329,13 +330,13 @@ export function LeagueManager() {
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" disabled={deletingIds.has(league.id)}>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" disabled={deletingIds.has(league.id)} aria-label={`Delete ${league.name}`}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Delete League</AlertDialogTitle>
+                                <AlertDialogTitle>Delete league</AlertDialogTitle>
                                 <AlertDialogDescription>
                                   Are you sure you want to delete "{league.name}"? This will permanently remove the league and all data.
                                 </AlertDialogDescription>

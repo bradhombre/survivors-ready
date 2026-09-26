@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, TreePalm } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -174,9 +174,11 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
         "fixed z-50 transition-all duration-300",
         isExpanded
           ? isMobile
-            ? "bottom-4 right-2 left-2"
+            ? "bottom-[calc(5rem+env(safe-area-inset-bottom))] right-2 left-2"
             : "bottom-4 right-4 w-[350px]"
-          : "bottom-4 right-4"
+          : isMobile
+            ? "bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4"
+            : "bottom-4 right-4"
       )}
     >
       {/* Collapsed FAB */}
@@ -185,13 +187,14 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
           data-tour="chat"
           onClick={() => setIsExpanded(true)}
           size="lg"
-          className="rounded-full h-14 w-14 shadow-lg relative"
+          className="relative h-14 w-14 rounded-full p-0 [&_svg]:size-6"
+          aria-label="Open league chat"
         >
           <MessageCircle className="h-6 w-6" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs"
+              className="absolute -top-1.5 -right-1.5 h-6 min-w-6 justify-center border-plank px-1 text-xs tabular"
             >
               {unreadCount > 99 ? "99+" : unreadCount}
             </Badge>
@@ -203,19 +206,19 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
       {isExpanded && (
         <div
           className={cn(
-            "bg-background border border-border rounded-lg shadow-xl flex flex-col",
-            isMobile ? "h-[70vh]" : "h-[450px]"
+            "plank flex flex-col overflow-hidden shadow-md",
+            isMobile ? "h-[60vh]" : "h-[450px]"
           )}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50 rounded-t-lg">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">League Chat</span>
+          <div className="bg-header flex items-center justify-between gap-2 py-2 pl-4 pr-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="font-display text-2xl leading-none">League chat</span>
               {onlineUsers.length > 0 && (
                 <OnlineUsersPopover onlineUsers={onlineUsers} currentUserId={userId}>
-                  <div className="flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full border-[1.5px] border-[hsl(var(--header-fg))] bg-success animate-pulse" />
+                    <span className="text-header-label text-xs font-bold tabular">
                       {onlineUsers.length} online
                     </span>
                   </div>
@@ -224,9 +227,10 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
             </div>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setIsExpanded(false)}
-              className="h-8 w-8 p-0"
+              className="h-11 w-11 shrink-0 text-[hsl(var(--header-fg))] hover:bg-[hsl(var(--header-fg)/0.12)] hover:text-[hsl(var(--header-fg))]"
+              aria-label="Close chat"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -240,12 +244,12 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
               </div>
             ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-2">
-                <div className="text-3xl mb-2">🏝️</div>
-                <p className="font-semibold text-sm">Meet JeffBot</p>
-                <p className="text-xs text-muted-foreground mt-1 mb-3">
-                  Your Survivor encyclopedia! Tag <span className="font-mono text-foreground">@jeffbot</span> with any question.
+                <TreePalm className="h-8 w-8 text-muted-foreground mb-2" aria-hidden="true" />
+                <p className="font-display text-2xl leading-none">Meet JeffBot</p>
+                <p className="text-xs text-muted-foreground mt-2 mb-3">
+                  Your Survivor encyclopedia! Tag <span className="font-bold text-foreground">@jeffbot</span> with any question.
                 </p>
-                <div className="flex flex-col gap-1.5 w-full max-w-[250px]">
+                <div className="flex flex-col gap-2 w-full max-w-[260px]">
                   {[
                     "Who won Season 45?",
                     "Best blindsides ever?",
@@ -257,9 +261,10 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
                         setInputValue(`@jeffbot ${prompt}`);
                         setTimeout(() => inputRef.current?.focus(), 50);
                       }}
-                      className="text-xs px-3 py-1.5 rounded-full border border-border bg-muted/50 hover:bg-accent hover:text-accent-foreground transition-colors text-left truncate"
+                      className="glass flex min-h-[40px] items-center gap-2 rounded-full px-4 text-left text-sm font-bold transition-colors hover:bg-muted"
                     >
-                      💬 {prompt}
+                      <MessageCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      <span className="truncate">{prompt}</span>
                     </button>
                   ))}
                 </div>
@@ -274,6 +279,7 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
                     isBot={msg.is_bot}
                     displayName={msg.user_display_name || msg.user_email?.split("@")[0] || "Unknown"}
                     createdAt={msg.created_at}
+                    isOwn={!msg.is_bot && msg.user_id === userId}
                     reactions={msg.reactions}
                     currentUserId={userId}
                     onToggleReaction={toggleReaction}
@@ -283,17 +289,18 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
                 
                 {/* JeffBot typing indicator */}
                 {isJeffBotTyping && (
-                  <div className="px-3 py-2 rounded-lg bg-accent/50 border border-accent max-w-[85%]">
+                  <div className="mr-auto max-w-[85%] rounded-[14px] rounded-bl-[4px] border-[1.5px] border-accent bg-card px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-accent-foreground">
-                        JeffBot 🏝️
+                      <span className="flex items-center gap-1 text-xs font-bold text-accent">
+                        <TreePalm className="h-3 w-3" aria-hidden="true" />
+                        JeffBot
                       </span>
                       <span className="text-xs text-muted-foreground">is typing...</span>
                     </div>
                     <div className="flex gap-1 mt-1">
-                      <span className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                     </div>
                   </div>
                 )}
@@ -302,7 +309,7 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
           </ScrollArea>
 
           {/* Input */}
-          <div className="p-3 border-t border-border">
+          <div className="p-3 border-t-2 border-plank bg-card">
             <div className="flex gap-2">
               <div className="flex-1 relative">
                 <ChatMentionInput
@@ -318,7 +325,7 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
                 {charCount > 400 && (
                   <span
                     className={cn(
-                      "absolute right-3 top-1/2 -translate-y-1/2 text-xs",
+                      "absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold tabular",
                       isOverLimit ? "text-destructive" : "text-muted-foreground"
                     )}
                   >
@@ -330,6 +337,9 @@ export function LeagueChat({ leagueId, userId, userEmail, userTeamName, teams }:
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isOverLimit || !canSend || isSending}
                 size="icon"
+                variant="accent"
+                className="shrink-0"
+                aria-label="Send message"
               >
                 {isSending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

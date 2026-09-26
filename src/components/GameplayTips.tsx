@@ -16,19 +16,19 @@ const TIPS = [
   },
   {
     icon: Vote,
-    title: "Final Tribal Vote",
+    title: "Final tribal vote",
     description:
       "Near the end of each episode, predict who gets voted out. Correct guesses earn bonus points — unless everyone picks the same person!",
   },
   {
     icon: Merge,
-    title: "Post-Merge Boost",
+    title: "Post-merge boost",
     description:
       "Once the merge happens, your commissioner toggles Post-Merge on, which increases survival points per round.",
   },
   {
     icon: Flame,
-    title: "Scoring Events",
+    title: "Scoring events",
     description:
       'Commissioners or players tap a contestant to score actions like "Find Idol", "Win Immunity", "Cry", and more during each episode.',
   },
@@ -48,41 +48,45 @@ export function GameplayTips({ leagueId }: GameplayTipsProps) {
   };
 
   return (
-    <Card className="border-accent/30 bg-accent/5 mx-4 mt-4 max-w-7xl lg:mx-auto">
-      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-        <div className="flex items-center gap-2">
-          <Lightbulb className="h-4 w-4 text-accent" />
-          <CardTitle className="text-base font-semibold">How the Game Works</CardTitle>
+    <Card className="mx-4 mt-4 max-w-7xl lg:mx-auto">
+      <CardHeader className="p-5 pb-3 flex flex-row items-start justify-between gap-3 space-y-0">
+        <div className="space-y-1.5">
+          <p className="label-caps flex items-center gap-1.5 text-muted-foreground">
+            <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
+            Tips
+          </p>
+          <CardTitle>How the game works</CardTitle>
         </div>
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={handleDismiss}
-          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+          className="-mr-2 -mt-2 shrink-0 text-muted-foreground hover:text-foreground"
+          aria-label="Dismiss tips"
         >
           <X className="h-4 w-4" />
         </Button>
       </CardHeader>
-      <CardContent className="pb-4">
-        <div className="grid gap-3 sm:grid-cols-2">
+      <CardContent className="p-5 pt-0">
+        <div className="grid gap-2 sm:grid-cols-2">
           {TIPS.map((tip) => {
             const Icon = tip.icon;
             return (
-              <div key={tip.title} className="flex items-start gap-3">
-                <div className="rounded-md bg-accent/10 p-1.5 shrink-0">
-                  <Icon className="h-4 w-4 text-accent" />
+              <div key={tip.title} className="glass rounded-[12px] flex items-start gap-3 p-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{tip.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{tip.description}</p>
+                  <p className="text-sm font-bold">{tip.title}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">{tip.description}</p>
                 </div>
               </div>
             );
           })}
         </div>
-        <div className="mt-3 flex justify-end">
-          <Button size="sm" variant="outline" onClick={handleDismiss}>
-            Got it!
+        <div className="mt-4 flex justify-end">
+          <Button variant="outline" onClick={handleDismiss}>
+            Got it
           </Button>
         </div>
       </CardContent>

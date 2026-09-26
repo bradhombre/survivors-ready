@@ -165,39 +165,39 @@ export function ChatMonitor() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-2xl font-bold">{stats.total.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Total Messages</p>
-            </div>
+          <CardContent className="p-4 space-y-1">
+            <p className="label-caps text-muted-foreground flex items-center gap-1.5">
+              <MessageSquare className="h-4 w-4 shrink-0" />
+              Total messages
+            </p>
+            <p className="text-3xl font-black tabular leading-none">{stats.total.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-2xl font-bold">{stats.today}</p>
-              <p className="text-xs text-muted-foreground">Today</p>
-            </div>
+          <CardContent className="p-4 space-y-1">
+            <p className="label-caps text-muted-foreground flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 shrink-0" />
+              Today
+            </p>
+            <p className="text-3xl font-black tabular leading-none">{stats.today}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Bot className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-2xl font-bold">{stats.botMessages.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">JeffBot Messages</p>
-            </div>
+          <CardContent className="p-4 space-y-1">
+            <p className="label-caps text-muted-foreground flex items-center gap-1.5">
+              <Bot className="h-4 w-4 shrink-0" />
+              JeffBot messages
+            </p>
+            <p className="text-3xl font-black tabular leading-none">{stats.botMessages.toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Users className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-2xl font-bold">{stats.activeLeagues}</p>
-              <p className="text-xs text-muted-foreground">Active Leagues</p>
-            </div>
+          <CardContent className="p-4 space-y-1">
+            <p className="label-caps text-muted-foreground flex items-center gap-1.5">
+              <Users className="h-4 w-4 shrink-0" />
+              Active leagues
+            </p>
+            <p className="text-3xl font-black tabular leading-none">{stats.activeLeagues}</p>
           </CardContent>
         </Card>
       </div>
@@ -205,18 +205,18 @@ export function ChatMonitor() {
       {/* Filter + Messages */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-4">
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Chat Feed
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <CardTitle className="flex items-center gap-2 text-3xl">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              Chat feed
             </CardTitle>
             <div className="flex items-center gap-4 flex-wrap">
               <Select value={filterLeague} onValueChange={setFilterLeague}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="All Leagues" />
+                <SelectTrigger className="w-[200px] h-11">
+                  <SelectValue placeholder="All leagues" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Leagues</SelectItem>
+                  <SelectItem value="all">All leagues</SelectItem>
                   {leagues.map((l) => (
                     <SelectItem key={l.id} value={l.id}>
                       {l.name}
@@ -226,7 +226,7 @@ export function ChatMonitor() {
               </Select>
               <div className="flex items-center gap-2">
                 <Switch id="hide-bot" checked={hideBot} onCheckedChange={setHideBot} />
-                <Label htmlFor="hide-bot" className="text-sm whitespace-nowrap">Hide JeffBot</Label>
+                <Label htmlFor="hide-bot" className="text-sm font-semibold whitespace-nowrap">Hide JeffBot</Label>
               </div>
             </div>
           </div>
@@ -237,27 +237,27 @@ export function ChatMonitor() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : messages.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No messages found.</p>
+            <p className="font-display text-2xl leading-none text-muted-foreground text-center py-10">No messages found</p>
           ) : (
             <ScrollArea className="h-[500px]">
               <div className="space-y-2 pr-4">
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm"
+                    className="glass flex items-start gap-3 rounded-[12px] p-3 text-sm"
                   >
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="secondary" className="text-[10px] shrink-0">
                           {msg.league_name}
                         </Badge>
-                        <span className="font-medium truncate">
+                        <span className="font-bold truncate">
                           {msg.sender_name}
                         </span>
                         {msg.is_bot && (
                           <Bot className="h-3 w-3 text-primary shrink-0" />
                         )}
-                        <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                        <span className="text-xs text-muted-foreground tabular ml-auto shrink-0">
                           {isToday(new Date(msg.created_at))
                             ? format(new Date(msg.created_at), "h:mm a")
                             : format(new Date(msg.created_at), "MMM d, h:mm a")}
@@ -281,7 +281,7 @@ export function ChatMonitor() {
                     {loadingMore ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : null}
-                    Load More
+                    Load more
                   </Button>
                 </div>
               )}

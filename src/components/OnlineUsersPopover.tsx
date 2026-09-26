@@ -23,25 +23,25 @@ export function OnlineUsersPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer">
+        <button className="flex min-h-[36px] items-center gap-1 rounded-full hover:opacity-80 transition-opacity cursor-pointer">
           {children}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-2" align="start">
-        <div className="text-xs font-medium text-muted-foreground mb-2">
-          Online Now
+      <PopoverContent className="w-52 rounded-[12px] border-2 border-plank p-3" align="start">
+        <div className="label-caps text-muted-foreground mb-2">
+          Online now
         </div>
         <div className="space-y-1">
           {onlineUsers.map((user) => (
             <div
               key={user.user_id}
-              className="flex items-center gap-2 py-1 px-1 rounded text-sm"
+              className="flex items-center gap-2 py-1.5 text-sm font-bold"
             >
-              <span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
+              <span className="h-2.5 w-2.5 rounded-full bg-success flex-shrink-0" aria-hidden="true" />
               <span className="truncate">
                 {user.display_name}
                 {user.user_id === currentUserId && (
-                  <span className="text-muted-foreground ml-1">(you)</span>
+                  <span className="text-muted-foreground font-normal ml-1">(you)</span>
                 )}
               </span>
             </div>

@@ -68,10 +68,13 @@ export const HistoryMode = ({ archivedSeasons, playerProfiles }: HistoryModeProp
   if (archivedSeasons.length === 0) {
     return (
       <div className="container max-w-6xl mx-auto p-4 md:p-8 space-y-8">
-        <div className="text-center space-y-4">
-          <h1 className="font-display text-5xl md:text-6xl leading-none">Season history</h1>
-          <p className="text-muted-foreground text-lg">No archived seasons yet</p>
-          <p className="text-muted-foreground">Complete a season and start a new draft to archive it here</p>
+        <div className="text-center space-y-6">
+          <h1 className="font-display text-5xl md:text-6xl leading-none text-primary">Season history</h1>
+          <div className="glass rounded-[14px] mx-auto max-w-md px-6 py-8 space-y-2">
+            <Trophy className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            <p className="font-display text-2xl leading-none">No archived seasons yet</p>
+            <p className="text-sm text-muted-foreground">Complete a season and start a new draft to archive it here</p>
+          </div>
         </div>
       </div>
     );
@@ -82,11 +85,14 @@ export const HistoryMode = ({ archivedSeasons, playerProfiles }: HistoryModeProp
     return (
       <div className="container max-w-6xl mx-auto p-4 md:p-8 space-y-8">
         {/* Season Selector */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <h1 className="font-display text-4xl leading-none">Season history</h1>
+        <div className="flex items-end justify-between flex-wrap gap-4">
+          <div className="flex items-end gap-4 flex-wrap">
+            <div className="space-y-1">
+              <p className="label-caps text-muted-foreground tabular">Season {selectedSeason.season}</p>
+              <h1 className="font-display text-4xl leading-none text-primary">Season history</h1>
+            </div>
             <Select value={selectedSeasonNumber} onValueChange={setSelectedSeasonNumber}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] h-11 rounded-[10px] border-2 bg-card font-bold">
                 <SelectValue placeholder="Select season" />
               </SelectTrigger>
               <SelectContent>
@@ -99,91 +105,109 @@ export const HistoryMode = ({ archivedSeasons, playerProfiles }: HistoryModeProp
             </Select>
           </div>
           <Button onClick={() => exportSeason(selectedSeason)} variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export Season
+            <Download className="h-4 w-4" />
+            Export season
           </Button>
         </div>
 
         {/* Final Standings */}
         <div className="space-y-4">
-          <h2 className="font-display text-3xl leading-none">Final standings</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {selectedSeason.finalStandings.map((entry, index) => (
-              <Card key={entry.player} className="glass-strong p-6 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className={`flex h-10 min-w-10 items-center justify-center rounded-full px-2 text-xl font-black tabular ${index === 0 ? "bg-warning text-warning-foreground border-2 border-plank" : "text-primary"}`}>{index + 1}</span>
-                  <span className="text-sm text-muted-foreground">{entry.activeCount} still in</span>
-                </div>
-                
-                {playerProfiles[entry.player]?.avatar && (
-                  <img 
-                    src={playerProfiles[entry.player].avatar} 
-                    alt={entry.player}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-border mx-auto"
-                  />
-                )}
-                
-                <div className="text-center">
-                  <h3 className="font-display text-2xl leading-none">{entry.player}</h3>
-                  <p className="text-4xl font-black tracking-tight tabular">{entry.score}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <h2 className="font-display text-3xl leading-none text-primary">Final standings</h2>
+          <Card className="overflow-hidden">
+            <ol className="divide-y divide-border">
+              {selectedSeason.finalStandings.map((entry, index) => (
+                <li
+                  key={entry.player}
+                  className={`flex min-h-[64px] items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5 ${index === 0 ? "bg-warning/20" : ""}`}
+                >
+                  <span
+                    className={`flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full px-2 text-xl font-black tabular ${index === 0 ? "bg-warning text-warning-foreground border-2 border-plank" : "text-primary"}`}
+                    aria-label={`Rank ${index + 1}`}
+                  >
+                    {index + 1}
+                  </span>
+
+                  {playerProfiles[entry.player]?.avatar && (
+                    <img
+                      src={playerProfiles[entry.player].avatar}
+                      alt={entry.player}
+                      className="h-12 w-12 shrink-0 rounded-full object-cover border-2 border-plank"
+                    />
+                  )}
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-display text-2xl leading-none break-words">{entry.player}</h3>
+                      {index === 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full border-2 border-plank bg-warning px-2.5 py-0.5 text-xs font-bold text-warning-foreground">
+                          <Trophy className="h-3 w-3" aria-hidden="true" />
+                          Winner
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs font-semibold text-muted-foreground tabular">{entry.activeCount} still in</p>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <p className="text-3xl font-black leading-none tracking-tight tabular sm:text-4xl">{entry.score}</p>
+                    <p className="label-caps text-muted-foreground">pts</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Card>
         </div>
 
         {/* Season Stats */}
-        <div className="grid md:grid-cols-3 gap-4">
-          <Card className="glass p-6 space-y-2">
-            <Users className="h-8 w-8 text-primary" />
-            <p className="text-3xl font-bold">{selectedSeason.contestants.length}</p>
-            <p className="text-muted-foreground">Total Contestants</p>
+        <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+          <Card className="flex items-center gap-4 p-4 sm:block sm:p-5 sm:space-y-2">
+            <Users className="h-6 w-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <p className="text-3xl font-black leading-none tabular">{selectedSeason.contestants.length}</p>
+            <p className="label-caps text-muted-foreground">Total contestants</p>
           </Card>
-          <Card className="glass p-6 space-y-2">
-            <Trophy className="h-8 w-8 text-accent" />
-            <p className="text-3xl font-bold">{selectedSeason.scoringEvents.length}</p>
-            <p className="text-muted-foreground">Scoring Events</p>
+          <Card className="flex items-center gap-4 p-4 sm:block sm:p-5 sm:space-y-2">
+            <Trophy className="h-6 w-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <p className="text-3xl font-black leading-none tabular">{selectedSeason.scoringEvents.length}</p>
+            <p className="label-caps text-muted-foreground">Scoring events</p>
           </Card>
-          <Card className="glass p-6 space-y-2">
-            <Calendar className="h-8 w-8 text-success" />
-            <p className="text-3xl font-bold">
+          <Card className="flex items-center gap-4 p-4 sm:block sm:p-5 sm:space-y-2">
+            <Calendar className="h-6 w-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <p className="text-3xl font-black leading-none tabular">
               {selectedSeason.scoringEvents.length > 0
                 ? Math.max(...selectedSeason.scoringEvents.map((e) => e.episode))
                 : 0}
             </p>
-            <p className="text-muted-foreground">Episodes Tracked</p>
+            <p className="label-caps text-muted-foreground">Episodes tracked</p>
           </Card>
         </div>
 
         {/* Contestants by Team */}
-        <div className="space-y-6">
-          <h2 className="font-display text-3xl leading-none">Team rosters</h2>
+        <div className="space-y-4">
+          <h2 className="font-display text-3xl leading-none text-primary">Team rosters</h2>
           {selectedSeason.finalStandings.map((entry) => entry.player as Player).map((player) => {
             const playerContestants = selectedSeason.contestants.filter(c => c.owner === player);
             if (playerContestants.length === 0) return null;
 
             return (
-              <Card key={player} className="glass-strong p-6 space-y-4">
-                <h3 className="text-2xl font-bold">{player}'s Team</h3>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Card key={player} className="p-5 sm:p-6 space-y-4">
+                <h3 className="font-display text-2xl leading-none">{player}'s team</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {playerContestants.map((contestant) => (
                     <div
                       key={contestant.id}
-                      className={`glass p-3 rounded-lg ${
-                        contestant.isEliminated ? "opacity-50" : ""
-                      }`}
+                      className="glass rounded-[12px] p-3 space-y-2"
                     >
                       <div className="flex items-center gap-2">
                         <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="sm" isEliminated={contestant.isEliminated} />
-                        <p className="font-bold">{contestant.name}</p>
+                        <p className={`font-bold ${contestant.isEliminated ? "line-through text-muted-foreground" : ""}`}>{contestant.name}</p>
                       </div>
-                      <div className="text-xs text-muted-foreground space-y-0.5">
+                      <div className="text-xs text-muted-foreground space-y-0.5 tabular">
                         {contestant.age && <p>Age: {contestant.age}</p>}
                         {contestant.location && <p className="truncate">{contestant.location}</p>}
                         {contestant.tribe && <p>Tribe: {contestant.tribe}</p>}
                         <p>Pick #{contestant.pickNumber}</p>
                       </div>
-                      {contestant.isEliminated && <p className="mt-1 inline-block rounded-full bg-destructive px-2 py-0.5 text-[11px] font-extrabold text-destructive-foreground">Voted out</p>}
+                      {contestant.isEliminated && <p className="inline-block rounded-full bg-destructive px-2.5 py-0.5 text-xs font-bold text-destructive-foreground">Voted out</p>}
                     </div>
                   ))}
                 </div>
@@ -198,10 +222,10 @@ export const HistoryMode = ({ archivedSeasons, playerProfiles }: HistoryModeProp
   // Default view: prompt to select a season
   return (
     <div className="container max-w-6xl mx-auto p-4 md:p-8 space-y-8">
-      <div className="flex items-center gap-4">
-        <h1 className="font-display text-4xl leading-none">Season history</h1>
+      <div className="flex items-center gap-4 flex-wrap">
+        <h1 className="font-display text-4xl leading-none text-primary">Season history</h1>
         <Select value={selectedSeasonNumber} onValueChange={setSelectedSeasonNumber}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px] h-11 rounded-[10px] border-2 bg-card font-bold">
             <SelectValue placeholder="Select season" />
           </SelectTrigger>
           <SelectContent>

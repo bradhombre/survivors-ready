@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -403,10 +402,10 @@ export function AdminPanel({
                 <div className="opacity-40 pointer-events-none">
                   <ScoringSettings leagueId={leagueId} onScoringConfigSaved={onScoringConfigSaved} />
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Card className="p-6 text-center max-w-md shadow-lg">
+                <div className="absolute inset-0 flex items-center justify-center px-4">
+                  <Card className="p-6 text-center max-w-md">
                     <Scale className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                    <h3 className="font-semibold text-lg mb-2">Scoring Not Applicable</h3>
+                    <h3 className="font-display text-2xl leading-none mb-3">Scoring not applicable</h3>
                     <p className="text-sm text-muted-foreground">
                       Custom scoring rules don't apply to Winner Takes All leagues. Switch to Full Fantasy to use custom scoring.
                     </p>
@@ -424,26 +423,28 @@ export function AdminPanel({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Contestant Management
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  Contestant management
                 </CardTitle>
                 <CardDescription>
                   Fix contestant assignments, owners, and pick numbers
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
+                <div className="max-h-96 overflow-y-auto divide-y divide-border">
                   {contestantRows.map((contestant) => (
                     <div
                       key={contestant.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className="flex flex-wrap items-center justify-between gap-3 py-3 min-h-[44px]"
                     >
-                      <div className="flex-1">
-                        <div className="font-medium">{contestant.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {contestant.tribe && `${contestant.tribe} • `}
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-bold ${contestant.is_eliminated ? 'line-through text-muted-foreground' : ''}`}>
+                          {contestant.name}
+                        </div>
+                        <div className="text-sm text-muted-foreground tabular">
+                          {contestant.tribe && `${contestant.tribe} · `}
                           Pick #{contestant.pick_number || 'Undrafted'}
-                          {contestant.is_eliminated && ' • Eliminated'}
+                          {contestant.is_eliminated && ' · Eliminated'}
                         </div>
                       </div>
 
@@ -480,7 +481,7 @@ export function AdminPanel({
                                 e.target.value ? parseInt(e.target.value) : null
                               )
                             }
-                            className="w-20"
+                            className="h-10 w-20 tabular"
                           />
 
                           <Button
@@ -499,13 +500,16 @@ export function AdminPanel({
                           <Button
                             size="sm"
                             variant="outline"
+                            aria-label={`Edit ${contestant.name}`}
                             onClick={() => setEditingContestant(contestant.id)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
-                            variant="destructive"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            aria-label={`Delete ${contestant.name}`}
                             onClick={() => deleteContestantFromDB(contestant.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -521,25 +525,27 @@ export function AdminPanel({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="h-5 w-5" />
-                  Invite New User
+                  <UserPlus className="h-5 w-5 text-muted-foreground" />
+                  Invite new user
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
                   <Input
                     placeholder="Email"
+                    aria-label="Email"
                     value={newUserEmail}
                     onChange={(e) => setNewUserEmail(e.target.value)}
                   />
                   <Input
                     type="password"
                     placeholder="Password"
+                    aria-label="Password"
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
                   />
                   <Button onClick={createUser} disabled={isLoading}>
-                    Create User
+                    Create user
                   </Button>
                 </div>
               </CardContent>
@@ -547,17 +553,17 @@ export function AdminPanel({
 
             <Card>
               <CardHeader>
-                <CardTitle>All Users</CardTitle>
+                <CardTitle>All users</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="divide-y divide-border">
                   {users.map((user) => (
                     <div
                       key={user.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className="flex flex-wrap items-center justify-between gap-3 py-3 min-h-[44px]"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium">{user.email}</span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="font-bold truncate">{user.email}</span>
                         <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                           {user.role}
                         </Badge>
@@ -569,11 +575,13 @@ export function AdminPanel({
                           onClick={() => toggleAdmin(user.id, user.role)}
                         >
                           <Shield className="h-4 w-4 mr-1" />
-                          {user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
+                          {user.role === 'admin' ? 'Remove admin' : 'Make admin'}
                         </Button>
                         <Button
                           size="sm"
-                          variant="destructive"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          aria-label={`Delete ${user.email}`}
                           onClick={() => deleteUser(user.id)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -588,8 +596,8 @@ export function AdminPanel({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  User-Player Assignments
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  User-player assignments
                 </CardTitle>
                 <CardDescription>
                   Assign each user account to control a specific player
@@ -603,36 +611,8 @@ export function AdminPanel({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5 text-primary" />
-                  Draft Management
-                </CardTitle>
-                <CardDescription>
-                  Revert the draft back to setup mode if needed
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    const first = confirm("⚠️ REVERT TO SETUP?\n\nThis will clear ALL draft picks and let you re-draft. Are you sure?");
-                    if (!first) return;
-                    const second = confirm("🚨 FINAL CONFIRMATION\n\nAll contestant assignments will be removed. This cannot be undone.\n\nClick OK to revert.");
-                    if (second) onRevertToSetup?.();
-                  }}
-                  disabled={!contestants.some(c => c.owner)}
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Revert Draft to Setup
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5 text-primary" />
-                  Season Management
+                  <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                  Season management
                 </CardTitle>
                 <CardDescription>
                   Archive current season and start a new one
@@ -645,23 +625,49 @@ export function AdminPanel({
                   onClick={handleNewSeason}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Start New Season (Archive Current)
+                  Start new season (archive current)
                 </Button>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Danger zone: destructive actions */}
+            <Card className="border-accent">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  Game Data Management
-                </CardTitle>
+                <p className="label-caps flex items-center gap-1.5 text-destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  Danger zone
+                </p>
+                <CardTitle className="text-3xl">Game data</CardTitle>
                 <CardDescription>
-                  Clear game data - these actions cannot be undone
+                  Clear game data. These actions cannot be undone.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
+              <CardContent className="divide-y divide-border">
+                <div className="space-y-3 pb-5">
+                  <div>
+                    <p className="label-caps text-muted-foreground">Draft</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Revert the draft back to setup mode if needed
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const first = confirm("REVERT TO SETUP?\n\nThis will clear ALL draft picks and let you re-draft. Are you sure?");
+                      if (!first) return;
+                      const second = confirm("FINAL CONFIRMATION\n\nAll contestant assignments will be removed. This cannot be undone.\n\nClick OK to revert.");
+                      if (second) onRevertToSetup?.();
+                    }}
+                    disabled={!contestants.some(c => c.owner)}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Revert draft to setup
+                  </Button>
+                </div>
+
+                <div className="space-y-3 py-5">
+                  <p className="label-caps text-muted-foreground">Scores and history</p>
                   <Button
                     variant="outline"
                     className="w-full justify-start"
@@ -669,11 +675,13 @@ export function AdminPanel({
                     disabled={isLoading}
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    Clean Up Duplicate Contestants
+                    Clean up duplicate contestants
                   </Button>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="episode-select">Clear Specific Episode</Label>
+                    <Label htmlFor="episode-select" className="label-caps text-muted-foreground">
+                      Clear specific episode
+                    </Label>
                     <div className="flex gap-2">
                       <Input
                         id="episode-select"
@@ -681,7 +689,7 @@ export function AdminPanel({
                         min="1"
                         value={selectedEpisode}
                         onChange={(e) => setSelectedEpisode(parseInt(e.target.value) || 1)}
-                        className="w-24"
+                        className="w-24 tabular"
                       />
                       <Button
                         variant="outline"
@@ -689,40 +697,40 @@ export function AdminPanel({
                         className="flex-1"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Clear Episode {selectedEpisode}
+                        Clear episode <span className="tabular">{selectedEpisode}</span>
                       </Button>
                     </div>
                   </div>
-                  
+
                   <Button
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handleClearScores}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Clear All Season Scores
+                    Clear all season scores
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     className="w-full justify-start"
                     onClick={handleClearHistory}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Clear Season History
+                    Clear season history
                   </Button>
                 </div>
-                
-                <Separator />
-                
-                <Button
-                  variant="destructive"
-                  className="w-full justify-start"
-                  onClick={handleResetAll}
-                >
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Reset All Game Data
-                </Button>
+
+                <div className="pt-5">
+                  <Button
+                    variant="destructive"
+                    className="w-full justify-start"
+                    onClick={handleResetAll}
+                  >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Reset all game data
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

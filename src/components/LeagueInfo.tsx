@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -289,11 +288,11 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
     <div className="container max-w-4xl mx-auto p-4 space-y-6">
       {/* My Team Section */}
       {myTeam && (
-        <Card className="border-primary/30 bg-primary/5">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCircle className="h-5 w-5" />
-              My Team
+            <CardTitle className="flex items-center gap-2 text-3xl">
+              <UserCircle className="h-6 w-6 shrink-0 text-muted-foreground" />
+              My team
             </CardTitle>
             <CardDescription>
               Customize your team name and photo
@@ -314,9 +313,9 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
               {/* Team info */}
               <div className="flex-1 space-y-3 w-full">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Badge variant="outline">Position #{myTeam.position}</Badge>
+                  <Badge variant="outline" className="tabular">Position #{myTeam.position}</Badge>
                 </div>
-                
+
                 {editingMyTeam ? (
                   <div className="flex items-center gap-2">
                     <Input
@@ -334,17 +333,17 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
                       }}
                       autoFocus
                     />
-                    <Button onClick={handleSaveMyTeamName} size="icon" disabled={savingMyTeam || !myTeamName.trim()}>
+                    <Button onClick={handleSaveMyTeamName} size="icon" disabled={savingMyTeam || !myTeamName.trim()} aria-label="Save team name">
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button onClick={() => { setEditingMyTeam(false); setMyTeamName(myTeam.name); }} size="icon" variant="ghost">
+                    <Button onClick={() => { setEditingMyTeam(false); setMyTeamName(myTeam.name); }} size="icon" variant="ghost" aria-label="Cancel">
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-semibold">{myTeam.name}</h3>
-                    <Button onClick={() => setEditingMyTeam(true)} size="icon" variant="ghost">
+                    <h3 className="font-display text-3xl leading-none break-words min-w-0">{myTeam.name}</h3>
+                    <Button onClick={() => setEditingMyTeam(true)} size="icon" variant="ghost" className="shrink-0 text-muted-foreground" aria-label="Edit team name">
                       <Pencil className="h-4 w-4" />
                     </Button>
                   </div>
@@ -359,8 +358,8 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Pencil className="h-5 w-5" />
-            League Name
+            <Pencil className="h-5 w-5 shrink-0 text-muted-foreground" />
+            League name
           </CardTitle>
           <CardDescription>
             {isOwner ? "Edit your league's display name" : "View the league name"}
@@ -369,6 +368,7 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
         <CardContent>
           <div className="flex gap-3">
             <Input
+              aria-label="League name"
               value={leagueName}
               onChange={(e) => setLeagueName(e.target.value)}
               placeholder="Enter league name"
@@ -376,8 +376,8 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
               className="max-w-md"
             />
             {isOwner && (
-              <Button onClick={handleSaveName} disabled={saving || leagueName === league?.name}>
-                <Save className="h-4 w-4 mr-2" />
+              <Button onClick={handleSaveName} disabled={saving || leagueName === league?.name} className="shrink-0">
+                <Save className="h-4 w-4" />
                 {saving ? "Saving..." : "Save"}
               </Button>
             )}
@@ -394,34 +394,37 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Link2 className="h-5 w-5" />
-            Invite Code
+            <Link2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+            Invite code
           </CardTitle>
           <CardDescription>
             Share this code with others to let them join your league
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-3 items-center flex-wrap">
-            <Input
-              value={league?.invite_code || ""}
-              readOnly
-              className="max-w-[200px] font-mono text-lg tracking-widest"
-            />
-            <Button variant="outline" onClick={handleCopyInviteCode}>
-              <Copy className="h-4 w-4 mr-2" />
-              Copy Code
-            </Button>
-            <Button variant="outline" onClick={handleCopyInviteLink}>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Copy Link
-            </Button>
+        <CardContent className="space-y-5">
+          <div className="flex flex-wrap items-stretch gap-3">
+            <div className="glass rounded-[12px] px-5 py-3">
+              <p className="label-caps text-muted-foreground">Invite code</p>
+              <p className="mt-1 select-all text-4xl font-black leading-none tracking-[0.18em] tabular">
+                {league?.invite_code || "—"}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" onClick={handleCopyInviteCode}>
+                <Copy className="h-4 w-4" />
+                Copy code
+              </Button>
+              <Button variant="accent" onClick={handleCopyInviteLink}>
+                <ExternalLink className="h-4 w-4" />
+                Copy link
+              </Button>
+            </div>
           </div>
-          
+
           {league?.invite_code && (
-            <div className="flex flex-col items-center sm:items-start gap-2 pt-2">
-              <p className="text-sm text-muted-foreground">Scan to join:</p>
-              <div className="bg-white p-3 rounded-lg">
+            <div className="flex flex-col items-center sm:items-start gap-2">
+              <p className="label-caps text-muted-foreground">Scan to join</p>
+              <div className="bg-white p-3 rounded-[12px] border-2 border-plank">
                 <QRCodeSVG 
                   value={`${window.location.origin}/join/${league.invite_code}`}
                   size={160}
@@ -437,43 +440,33 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+            <Users className="h-5 w-5 shrink-0 text-muted-foreground" />
             Members
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="tabular">
             {members.length} member{members.length !== 1 ? "s" : ""} in this league
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Joined</TableHead>
-                {isOwner && <TableHead className="text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <ul className="divide-y divide-border">
               {members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">
-                    {member.email}
-                    {member.user_id === currentUserId && (
-                      <span className="text-muted-foreground ml-2">(you)</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(member.role)}>
-                      {member.role.replace("_", " ")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(member.joined_at)}
-                  </TableCell>
+                <li key={member.id} className="flex min-h-[44px] flex-wrap items-center gap-x-3 gap-y-2 py-3">
+                  <div className="min-w-0 flex-1 basis-48">
+                    <p className="truncate font-bold">
+                      {member.email}
+                      {member.user_id === currentUserId && (
+                        <span className="text-muted-foreground font-normal ml-2">(you)</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground tabular">
+                      Joined {formatDate(member.joined_at)}
+                    </p>
+                  </div>
+                  <Badge variant={getRoleBadgeVariant(member.role)} className="capitalize">
+                    {member.role.replace("_", " ")}
+                  </Badge>
                   {isOwner && (
-                    <TableCell className="text-right">
+                    <div className="ml-auto">
                       {canManageMember(member) ? (
                         <div className="flex gap-2 justify-end">
                           <Button
@@ -481,19 +474,19 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
                             size="sm"
                             onClick={() => handlePromoteToAdmin(member.id, member.email)}
                           >
-                            <ShieldPlus className="h-4 w-4 mr-1" />
+                            <ShieldPlus className="h-4 w-4" />
                             Promote
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4 mr-1" />
+                                <Trash2 className="h-4 w-4" />
                                 Remove
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                                <AlertDialogTitle>Remove member</AlertDialogTitle>
                                 <AlertDialogDescription>
                                   Are you sure you want to remove {member.email} from this league? 
                                   They will need to rejoin using the invite code.
@@ -503,6 +496,7 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => handleRemoveMember(member.id, member.email, member.user_id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                   Remove
                                 </AlertDialogAction>
@@ -513,23 +507,21 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
-                    </TableCell>
+                    </div>
                   )}
-                </TableRow>
+                </li>
               ))}
-            </TableBody>
-          </Table>
-          </div>
+          </ul>
         </CardContent>
       </Card>
 
       {/* Leave League Section - Only for non-owners */}
       {!isOwner && (
-        <Card className="border-destructive/50">
+        <Card className="border-destructive">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
-              <LogOut className="h-5 w-5" />
-              Leave League
+              <LogOut className="h-5 w-5 shrink-0" />
+              Leave league
             </CardTitle>
             <CardDescription>
               Leave this league and remove yourself from all associated data
@@ -539,20 +531,20 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" disabled={isLeaving}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  {isLeaving ? "Leaving..." : "Leave League"}
+                  <LogOut className="h-4 w-4" />
+                  {isLeaving ? "Leaving..." : "Leave league"}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Leave League</AlertDialogTitle>
+                  <AlertDialogTitle>Leave league</AlertDialogTitle>
                   <AlertDialogDescription>
                     Are you sure you want to leave "{league?.name}"? You will need a new invite code to rejoin.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleLeaveLeague}>
+                  <AlertDialogAction onClick={handleLeaveLeague} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                     Leave
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -564,11 +556,11 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
 
       {/* Delete League Section - Only for owners */}
       {isOwner && (
-        <Card className="border-destructive/50">
+        <Card className="border-destructive">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
-              Delete League
+              <Trash2 className="h-5 w-5 shrink-0" />
+              Delete league
             </CardTitle>
             <CardDescription>
               Permanently delete this league and all associated data
@@ -578,21 +570,21 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" disabled={isDeleting}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {isDeleting ? "Deleting..." : "Delete League"}
+                  <Trash2 className="h-4 w-4" />
+                  {isDeleting ? "Deleting..." : "Delete league"}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete League</AlertDialogTitle>
+                  <AlertDialogTitle>Delete league</AlertDialogTitle>
                   <AlertDialogDescription>
                     Are you sure you want to permanently delete "{league?.name}"? This will remove all members, teams, game data, chat messages, and scoring history. This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteLeague}>
-                    Delete Permanently
+                  <AlertDialogAction onClick={handleDeleteLeague} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete permanently
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

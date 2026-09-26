@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +16,7 @@ import { AdminSettings } from "@/components/admin/AdminSettings";
 import { LeagueManager } from "@/components/admin/LeagueManager";
 import { ArrowLeft, Users, Newspaper, UserCircle, Settings, Bug, Sparkles, Send, Loader2, MessageSquare } from "lucide-react";
 import { ChatMonitor } from "@/components/admin/ChatMonitor";
+import { Lockup } from "@/components/Lockup";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -149,44 +150,57 @@ export default function Admin() {
   if (!isSuperAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/leagues")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-bold text-foreground">Platform Admin</h1>
+    <div className="min-h-screen bg-background">
+      <header className="bg-header">
+        <div className="container mx-auto max-w-6xl px-4 pt-4 pb-5 flex justify-between items-start gap-3">
+          <div className="flex flex-col gap-2 min-w-0">
+            <Link to="/leagues" className="self-start">
+              <Lockup className="text-2xl" />
+            </Link>
+            <h1 className="label-caps text-header-label">Site admin</h1>
           </div>
+          <Link
+            to="/leagues"
+            className="flex min-h-[44px] items-center gap-2 rounded-[10px] px-2 text-sm font-semibold text-header-label transition-colors hover:text-[hsl(var(--header-fg))]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">My leagues</span>
+            <span className="sr-only sm:hidden">Back to my leagues</span>
+          </Link>
         </div>
+      </header>
+      <div className="buff-trim" aria-hidden="true" />
 
+      <main className="container mx-auto max-w-6xl px-4 py-6 space-y-6">
         <Tabs defaultValue="leagues" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="leagues" className="gap-2">
-              <Users className="h-4 w-4" />
-              Leagues
-            </TabsTrigger>
-            <TabsTrigger value="cast" className="gap-2">
-              <UserCircle className="h-4 w-4" />
-              Cast
-            </TabsTrigger>
-            <TabsTrigger value="news" className="gap-2">
-              <Newspaper className="h-4 w-4" />
-              News
-            </TabsTrigger>
-            <TabsTrigger value="chat" className="gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Chat
-            </TabsTrigger>
-            <TabsTrigger value="bugs" className="gap-2">
-              <Bug className="h-4 w-4" />
-              Bugs ({bugs.length})
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
+          <div className="-mx-4 overflow-x-auto px-4">
+            <TabsList className="w-max">
+              <TabsTrigger value="leagues" className="gap-2">
+                <Users className="h-4 w-4" />
+                Leagues
+              </TabsTrigger>
+              <TabsTrigger value="cast" className="gap-2">
+                <UserCircle className="h-4 w-4" />
+                Cast
+              </TabsTrigger>
+              <TabsTrigger value="news" className="gap-2">
+                <Newspaper className="h-4 w-4" />
+                News
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Chat
+              </TabsTrigger>
+              <TabsTrigger value="bugs" className="gap-2">
+                <Bug className="h-4 w-4" />
+                Bugs <span className="tabular">({bugs.length})</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Settings
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="leagues"><LeagueManager /></TabsContent>
           <TabsContent value="cast"><CastManager /></TabsContent>
@@ -196,20 +210,20 @@ export default function Admin() {
           <TabsContent value="bugs">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bug className="h-5 w-5" />
-                  Bug Reports
+                <CardTitle className="flex items-center gap-2 text-3xl">
+                  <Bug className="h-5 w-5 text-muted-foreground" />
+                  Bug reports
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {bugs.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No bug reports yet.</p>
+                  <p className="font-display text-2xl leading-none text-center text-muted-foreground py-10">No bug reports yet</p>
                 ) : (
                   <div className="space-y-4">
                     {bugs
                       .filter((bug) => bug.status !== 'resolved' && bug.status !== 'closed')
                       .map((bug) => (
-                      <Card key={bug.id} className="p-4 space-y-3">
+                      <div key={bug.id} className="glass rounded-[12px] p-4 space-y-3">
                         <div className="space-y-2">
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -221,23 +235,23 @@ export default function Admin() {
                               {bug.league_name && (
                                 <>
                                   <span className="text-xs text-muted-foreground">·</span>
-                                  <span className="text-xs font-medium text-primary">{bug.league_name}</span>
+                                  <span className="text-xs font-bold text-primary">{bug.league_name}</span>
                                 </>
                               )}
                             </div>
                             <select
                               value={bug.status}
                               onChange={(e) => handleUpdateBugStatus(bug.id, e.target.value)}
-                              className="text-xs rounded border border-input bg-background px-2 py-1 shrink-0 w-auto max-w-[130px]"
+                              className="h-9 rounded-[10px] border-2 border-input bg-card px-2 text-xs font-semibold shrink-0 w-auto max-w-[130px]"
                             >
                               <option value="open">Open</option>
-                              <option value="in_progress">In Progress</option>
+                              <option value="in_progress">In progress</option>
                               <option value="resolved">Resolved</option>
                               <option value="closed">Closed</option>
                             </select>
                           </div>
                           <details className="cursor-pointer">
-                            <summary className="text-sm">{bug.description}</summary>
+                            <summary className="text-sm font-semibold">{bug.description}</summary>
                             <p className="mt-2 text-sm whitespace-pre-wrap text-muted-foreground">{bug.description}</p>
                           </details>
                           {bug.page_url && (
@@ -248,11 +262,11 @@ export default function Admin() {
                         {/* Admin notes section */}
                         <div className="space-y-2 pt-2 border-t border-border">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">Admin Response</span>
+                            <span className="label-caps text-muted-foreground">Admin response</span>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 gap-1 text-xs"
+                              className="gap-1"
                               onClick={() => handleAISuggest(bug)}
                               disabled={generatingAI[bug.id]}
                             >
@@ -261,7 +275,7 @@ export default function Admin() {
                               ) : (
                                 <Sparkles className="h-3 w-3" />
                               )}
-                              AI Suggest
+                              AI suggest
                             </Button>
                           </div>
                           <Textarea
@@ -274,7 +288,7 @@ export default function Admin() {
                           <div className="flex justify-end">
                             <Button
                               size="sm"
-                              className="h-7 gap-1 text-xs"
+                              className="gap-1"
                               onClick={() => handleSaveNotes(bug.id)}
                               disabled={savingNotes[bug.id] || (notesInput[bug.id] || "") === (bug.admin_notes || "")}
                             >
@@ -283,22 +297,22 @@ export default function Admin() {
                               ) : (
                                 <Send className="h-3 w-3" />
                               )}
-                              Send Response
+                              Send response
                             </Button>
                           </div>
                         </div>
-                      </Card>
+                      </div>
                     ))}
                     {bugs.filter((bug) => bug.status === 'resolved' || bug.status === 'closed').length > 0 && (
                       <details className="mt-6">
-                        <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
+                        <summary className="cursor-pointer text-sm font-semibold text-muted-foreground tabular hover:text-foreground transition-colors">
                           {bugs.filter((bug) => bug.status === 'resolved' || bug.status === 'closed').length} resolved/closed report(s)
                         </summary>
                         <div className="space-y-4 mt-4">
                           {bugs
                             .filter((bug) => bug.status === 'resolved' || bug.status === 'closed')
                             .map((bug) => (
-                              <Card key={bug.id} className="p-4 space-y-3 opacity-60">
+                              <div key={bug.id} className="glass rounded-[12px] p-4 space-y-3 opacity-60">
                                 <div className="space-y-2">
                                   <div className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -311,17 +325,17 @@ export default function Admin() {
                                     <select
                                       value={bug.status}
                                       onChange={(e) => handleUpdateBugStatus(bug.id, e.target.value)}
-                                      className="text-xs rounded border border-input bg-background px-2 py-1 shrink-0 w-auto max-w-[130px]"
+                                      className="h-9 rounded-[10px] border-2 border-input bg-card px-2 text-xs font-semibold shrink-0 w-auto max-w-[130px]"
                                     >
                                       <option value="open">Open</option>
-                                      <option value="in_progress">In Progress</option>
+                                      <option value="in_progress">In progress</option>
                                       <option value="resolved">Resolved</option>
                                       <option value="closed">Closed</option>
                                     </select>
                                   </div>
                                   <p className="text-sm">{bug.description}</p>
                                 </div>
-                              </Card>
+                              </div>
                             ))}
                         </div>
                       </details>
@@ -334,7 +348,7 @@ export default function Admin() {
 
           <TabsContent value="settings"><AdminSettings /></TabsContent>
         </Tabs>
-      </div>
+      </main>
     </div>
   );
 }
