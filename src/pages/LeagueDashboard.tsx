@@ -18,6 +18,7 @@ import { LeagueInfo } from "@/components/LeagueInfo";
 import { SeasonCompleteBanner, NewSeasonDialog } from "@/components/SeasonCompleteBanner";
 import { Lockup } from "@/components/Lockup";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { WinnerTakesAllMode } from "@/components/WinnerTakesAllMode";
 import { NewsFeed } from "@/components/NewsFeed";
 import { LeagueChat } from "@/components/LeagueChat";
@@ -35,6 +36,7 @@ const LeagueDashboard = () => {
   const [leagueLoading, setLeagueLoading] = useState(true);
   const [allowPlayerScoring, setAllowPlayerScoring] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("draft"); // will be corrected by effect
+  const isMobile = useIsMobile();
   const [newSeasonOpen, setNewSeasonOpen] = useState(false);
   // Season numbers are frozen when the dialog opens so the text doesn't change mid-click
   const [rollover, setRollover] = useState<{
@@ -228,8 +230,8 @@ const LeagueDashboard = () => {
 
   if (loading || gameLoading || leagueLoading || roleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+      <div className="min-h-screen flex items-center justify-center" role="status">
+        <p className="label-caps text-muted-foreground">Loading your league…</p>
       </div>
     );
   }
@@ -261,6 +263,14 @@ const LeagueDashboard = () => {
       setMode("game");
     }
   };
+
+  const tabs = [
+    !canShowGame && { key: "draft", label: "Draft", Icon: ClipboardList },
+    { key: "game", label: "Game", Icon: Trophy },
+    { key: "history", label: "History", Icon: History },
+    { key: "league", label: "League", Icon: Users },
+    isLeagueAdmin && { key: "admin", label: "Admin", Icon: Shield },
+  ].filter(Boolean) as { key: ViewMode; label: string; Icon: typeof Trophy }[];
 
   return (
     <div className="min-h-screen">
@@ -322,37 +332,59 @@ const LeagueDashboard = () => {
       </header>
       <div className="buff-trim" aria-hidden="true" />
 
-      {/* Mode Navigation */}
-      <nav className="sticky top-0 z-50 border-b-2 border-plank bg-card/95 backdrop-blur-sm" aria-label="League sections">
-        <div className="container max-w-7xl mx-auto px-2 sm:px-4 py-2">
-          <div className="flex gap-1 overflow-x-auto flex-nowrap">
-            {(
-              [
-                !canShowGame && { key: "draft", label: "Draft", Icon: ClipboardList },
-                { key: "game", label: "Game", Icon: Trophy },
-                { key: "history", label: "History", Icon: History },
-                { key: "league", label: "League", Icon: Users },
-                isLeagueAdmin && { key: "admin", label: "Admin", Icon: Shield },
-              ].filter(Boolean) as { key: ViewMode; label: string; Icon: typeof Trophy }[]
-            ).map(({ key, label, Icon }) => (
+      {/* Mode Navigation: pills under the header on tablet/desktop, a bottom tab bar on phones.
+          Only one of the two renders, so the onboarding tour's data-tour targets stay unique. */}
+      {!isMobile ? (
+        <nav className="sticky top-0 z-50 border-b-2 border-plank bg-card/95 backdrop-blur-sm" aria-label="League sections">
+          <div className="container max-w-7xl mx-auto px-2 sm:px-4 py-2">
+            <div className="flex gap-1 overflow-x-auto flex-nowrap">
+              {tabs.map(({ key, label, Icon }) => (
+                <button
+                  key={key}
+                  data-tour={key}
+                  onClick={() => setViewMode(key)}
+                  aria-current={viewMode === key ? "page" : undefined}
+                  className={`flex min-h-[44px] flex-1 sm:flex-none shrink-0 items-center justify-center gap-2 rounded-full px-4 text-sm transition-colors ${
+                    viewMode === key
+                      ? "bg-primary text-primary-foreground font-extrabold"
+                      : "font-semibold text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Icon className="hidden sm:block h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </nav>
+      ) : (
+        <nav
+          className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-plank bg-card/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]"
+          aria-label="League sections"
+        >
+          <div className="flex items-stretch gap-1 px-2 py-1.5">
+            {tabs.map(({ key, label, Icon }) => (
               <button
                 key={key}
                 data-tour={key}
-                onClick={() => setViewMode(key)}
+                onClick={() => {
+                  setViewMode(key);
+                  window.scrollTo({ top: 0 });
+                }}
                 aria-current={viewMode === key ? "page" : undefined}
-                className={`flex min-h-[44px] flex-1 sm:flex-none shrink-0 items-center justify-center gap-2 rounded-full px-4 text-sm transition-colors ${
+                className={`flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl text-[11px] transition-colors ${
                   viewMode === key
                     ? "bg-primary text-primary-foreground font-extrabold"
-                    : "font-semibold text-foreground hover:bg-muted"
+                    : "font-semibold text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon className="hidden sm:block h-4 w-4" />
+                <Icon className="h-5 w-5" aria-hidden="true" />
                 {label}
               </button>
             ))}
           </div>
-        </div>
-      </nav>
+        </nav>
+      )}
 
       {/* Commissioner Checklist - show on Draft tab during setup/draft */}
       {isLeagueAdmin && viewMode === "draft" && (state.mode === "setup" || state.mode === "draft") && (
@@ -370,21 +402,21 @@ const LeagueDashboard = () => {
         <>
           {isLeagueAdmin && state.contestants.some(c => c.owner) && (
             <div className="container max-w-7xl mx-auto px-4 mt-4">
-              <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3">
-                <Undo2 className="h-4 w-4 text-destructive shrink-0" />
-                <span className="text-sm text-muted-foreground flex-1">Draft in progress — need to start over?</span>
+              <div className="flex flex-wrap items-center gap-3 rounded-[12px] border-2 border-accent bg-accent/10 px-4 py-3">
+                <Undo2 className="h-4 w-4 text-accent shrink-0" />
+                <span className="text-sm font-semibold flex-1 min-w-[180px]">Draft in progress. Need to start over?</span>
                 <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => {
-                    const first = confirm("⚠️ REVERT TO SETUP?\n\nThis will clear ALL draft picks and let you re-draft. Are you sure?");
+                    const first = confirm("REVERT TO SETUP?\n\nThis will clear ALL draft picks and let you re-draft. Are you sure?");
                     if (!first) return;
-                    const second = confirm("🚨 FINAL CONFIRMATION\n\nAll contestant assignments will be removed. This cannot be undone.\n\nClick OK to revert.");
+                    const second = confirm("FINAL CONFIRMATION\n\nAll contestant assignments will be removed. This cannot be undone.\n\nClick OK to revert.");
                     if (second) revertToSetup();
                   }}
                 >
                   <Undo2 className="h-4 w-4 mr-1" />
-                  Revert to Setup
+                  Revert to setup
                 </Button>
               </div>
             </div>
@@ -414,9 +446,9 @@ const LeagueDashboard = () => {
           <GameplayTips leagueId={leagueId!} />
           {!canShowGame && !isSuperAdmin && (
             <div className="container max-w-7xl mx-auto px-4 mt-4">
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                <Info className="h-4 w-4 shrink-0" />
-                <span>This page will be active once the draft is complete. Take a look around to see how scoring works!</span>
+              <div className="glass rounded-[12px] flex items-center gap-3 px-4 py-3 text-sm">
+                <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span>Scoring opens once the draft is done. Look around to see how it works.</span>
               </div>
             </div>
           )}

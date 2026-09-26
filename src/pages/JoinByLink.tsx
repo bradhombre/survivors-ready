@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { Lockup } from '@/components/Lockup';
 
 export default function JoinByLink() {
   const { code } = useParams<{ code: string }>();
@@ -74,13 +75,22 @@ export default function JoinByLink() {
   }, [code, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      {isProcessing && (
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Joining league...</p>
+    <div className="min-h-screen flex flex-col">
+      <header className="bg-header">
+        <div className="container max-w-md mx-auto px-4 py-5">
+          <Lockup className="text-xl sm:text-2xl" />
         </div>
-      )}
+      </header>
+      <div className="buff-trim" aria-hidden="true" />
+      <main className="flex-1 flex items-center justify-center px-4 py-16">
+        {isProcessing && (
+          <div className="plank px-8 py-8 flex flex-col items-center gap-4 text-center" role="status">
+            <Loader2 className="h-8 w-8 animate-spin text-accent" />
+            <p className="font-display text-3xl leading-none">Heading to camp…</p>
+            <p className="text-sm text-muted-foreground">Joining the league</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

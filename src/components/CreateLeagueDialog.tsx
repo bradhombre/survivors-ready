@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -34,19 +33,22 @@ type WizardStep = 1 | 2 | 3 | 4;
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
-    <div className="flex items-center justify-center gap-2 mb-4">
-      {Array.from({ length: total }, (_, i) => i + 1).map((step) => (
-        <div
-          key={step}
-          className={`h-2 rounded-full transition-all ${
-            step === current
-              ? 'w-8 bg-primary'
-              : step < current
-              ? 'w-2 bg-primary/60'
-              : 'w-2 bg-muted-foreground/30'
-          }`}
-        />
-      ))}
+    <div className="flex items-center gap-3 pr-10">
+      <span className="label-caps text-muted-foreground tabular">Step {current} of {total}</span>
+      <div className="flex items-center gap-1.5" aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => i + 1).map((step) => (
+          <div
+            key={step}
+            className={`h-2 rounded-full transition-all ${
+              step === current
+                ? 'w-8 bg-accent'
+                : step < current
+                ? 'w-2 bg-primary'
+                : 'w-2 bg-muted-foreground/30'
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -306,14 +308,14 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
         {step === 1 && (
           <>
             <DialogHeader>
-              <DialogTitle>Create a New League</DialogTitle>
+              <DialogTitle>Start a league</DialogTitle>
               <DialogDescription>
                 Start a new fantasy league and invite your friends to join.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateLeague} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="league-name">League Name</Label>
+                <Label htmlFor="league-name" className="label-caps text-muted-foreground">League name</Label>
                 <Input
                   id="league-name"
                   placeholder="e.g., Survivor Squad"
@@ -324,37 +326,39 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
                 />
               </div>
               <div className="space-y-2">
-                <Label>Game Type</Label>
+                <Label className="label-caps text-muted-foreground">Game type</Label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setGameType('full')}
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    aria-pressed={gameType === 'full'}
+                    className={`min-h-[88px] p-3 rounded-[12px] border-2 bg-card text-left transition-colors ${
                       gameType === 'full'
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-muted-foreground/30'
+                        ? 'border-plank border-b-4'
+                        : 'border-border hover:border-input'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <Trophy className="h-4 w-4 text-primary" />
-                      <span className="font-semibold text-sm">Full Fantasy</span>
+                      <Trophy className="h-4 w-4 text-success" />
+                      <span className="font-extrabold text-sm">Full fantasy</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Track points every episode</p>
                   </button>
                   <button
                     type="button"
                     onClick={() => setGameType('winner_takes_all')}
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    aria-pressed={gameType === 'winner_takes_all'}
+                    className={`min-h-[88px] p-3 rounded-[12px] border-2 bg-card text-left transition-colors ${
                       gameType === 'winner_takes_all'
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-muted-foreground/30'
+                        ? 'border-plank border-b-4'
+                        : 'border-border hover:border-input'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <Target className="h-4 w-4 text-accent" />
-                      <span className="font-semibold text-sm">Winner Takes All</span>
+                      <span className="font-extrabold text-sm">Winner takes all</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Pick who wins</p>
+                    <p className="text-xs text-muted-foreground">Pick who wins it all</p>
                   </button>
                 </div>
               </div>
@@ -375,7 +379,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
         {step === 2 && (
           <>
             <DialogHeader>
-              <DialogTitle>League Settings</DialogTitle>
+              <DialogTitle>League settings</DialogTitle>
               <DialogDescription>
                 Configure your league size and draft settings. You can always change these later in Admin Settings.
               </DialogDescription>
@@ -383,7 +387,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
             <div className="space-y-5 py-2">
               {/* League Size */}
               <div className="space-y-2">
-                <Label>Number of Players</Label>
+                <Label className="label-caps text-muted-foreground">Number of teams</Label>
                 <div className="flex items-center justify-center gap-4">
                   <Button
                     onClick={() => setLeagueSize(Math.max(2, leagueSize - 1))}
@@ -393,7 +397,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
-                  <span className="text-3xl font-bold text-primary min-w-[48px] text-center">
+                  <span className="text-4xl font-black tabular text-primary min-w-[56px] text-center" aria-live="polite">
                     {leagueSize}
                   </span>
                   <Button
@@ -409,7 +413,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
 
               {/* Picks Per Team */}
               <div className="space-y-2">
-                <Label>Picks Per Team</Label>
+                <Label className="label-caps text-muted-foreground">Picks per team</Label>
                 <p className="text-xs text-muted-foreground">
                   {gameType === 'winner_takes_all'
                     ? 'How many Sole Survivor predictions each player gets'
@@ -427,7 +431,8 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
                         setPicksPerTeamOverride(val);
                       }
                     }}
-                    className="w-24"
+                    className="w-24 font-extrabold tabular"
+                    aria-label="Picks per team"
                   />
                   {picksPerTeamOverride !== null && (
                     <Button
@@ -443,14 +448,14 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
 
               {/* Season Number */}
               <div className="space-y-2">
-                <Label htmlFor="season-number">Season Number</Label>
+                <Label htmlFor="season-number" className="label-caps text-muted-foreground">Season</Label>
                 <Input
                   id="season-number"
                   type="number"
                   min={1}
                   value={seasonNumber}
                   onChange={(e) => setSeasonNumber(parseInt(e.target.value) || 1)}
-                  className="w-24"
+                  className="w-24 font-extrabold tabular"
                 />
               </div>
             </div>
@@ -471,18 +476,18 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
         {step === 3 && (
           <>
             <DialogHeader>
-              <DialogTitle>Import Cast</DialogTitle>
+              <DialogTitle>Bring in the cast</DialogTitle>
               <DialogDescription>
                 Import the official cast for Season {seasonNumber}, or add contestants manually later in Admin Settings.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               {importedCount !== null ? (
-                <Card className="p-4 text-center space-y-2 border-success/30 bg-success/5">
+                <div className="rounded-[12px] border-2 border-success bg-success/10 p-4 text-center space-y-2">
                   <CheckCircle2 className="h-8 w-8 text-success mx-auto" />
-                  <p className="font-semibold">{importedCount} contestants imported!</p>
-                  <p className="text-sm text-muted-foreground">You can manage them in Admin Settings.</p>
-                </Card>
+                  <p className="font-extrabold"><span className="tabular">{importedCount}</span> castaways are on the beach</p>
+                  <p className="text-sm text-muted-foreground">You can edit them any time in the Admin tab.</p>
+                </div>
               ) : (
                 <div className="text-center space-y-4">
                   <Button
@@ -490,13 +495,14 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
                     disabled={importingCast}
                     className="gap-2"
                     size="lg"
+                    variant="accent"
                   >
                     {importingCast ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Download className="h-4 w-4" />
                     )}
-                    {importingCast ? 'Importing...' : `Import Season ${seasonNumber} Cast`}
+                    {importingCast ? 'Importing...' : `Import the Season ${seasonNumber} cast`}
                   </Button>
                   <p className="text-xs text-muted-foreground">
                     Or skip this step and add contestants manually later.
@@ -521,10 +527,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
         {step === 4 && (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-success" />
-                Customize Your Team
-              </DialogTitle>
+              <DialogTitle>Name your team</DialogTitle>
               <DialogDescription>
                 Give your team a name and upload a photo to make it yours! You can always change this later.
               </DialogDescription>
@@ -546,7 +549,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
 
               {/* Team name */}
               <div className="space-y-2">
-                <Label htmlFor="team-name">Team Name</Label>
+                <Label htmlFor="team-name" className="label-caps text-muted-foreground">Team name</Label>
                 <Input
                   id="team-name"
                   placeholder="e.g., The Tribal Council"
@@ -565,7 +568,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
                 <Button type="button" variant="ghost" onClick={handleFinish}>
                   Skip for now
                 </Button>
-                <Button onClick={handleSaveTeam} disabled={savingTeam || !teamName.trim()}>
+                <Button variant="accent" onClick={handleSaveTeam} disabled={savingTeam || !teamName.trim()}>
                   {savingTeam ? 'Saving...' : 'Done'}
                 </Button>
               </div>

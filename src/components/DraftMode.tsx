@@ -81,6 +81,28 @@ export const DraftMode = ({
 
   const currentDrafter = getCurrentDrafter();
 
+  // Same order rule as getCurrentDrafter, for any pick index (used for "up next")
+  const getDrafterAt = (index: number) => {
+    if (index >= totalPicks || teamCount === 0) return null;
+    if (draftType === "snake") {
+      const round = Math.floor(index / teamCount);
+      const posInRound = index % teamCount;
+      return round % 2 === 0 ? draftOrder[posInRound] : draftOrder[teamCount - 1 - posInRound];
+    }
+    return draftOrder[index % teamCount];
+  };
+  const nextDrafter = getDrafterAt(currentDraftIndex + 1);
+  const round = teamCount > 0 ? Math.floor(currentDraftIndex / teamCount) + 1 : 1;
+  const myTeamName = teams.find((t) => t.user_id && t.user_id === user?.id)?.name;
+  const isMyPick = !!currentDrafter && currentDrafter === myTeamName;
+
+  // Tribe filter chips for the available list
+  const [tribeFilter, setTribeFilter] = useState<string | null>(null);
+  const tribes = useMemo(
+    () => Array.from(new Set(contestants.map((c) => c.tribe).filter((t): t is string => !!t))).sort(),
+    [contestants]
+  );
+
   const [isDrafting, setIsDrafting] = useState(false);
 
   const handleDraftContestant = useCallback(async (contestantId: string) => {
@@ -111,74 +133,69 @@ export const DraftMode = ({
       .sort((a, b) => (a.pickNumber || 0) - (b.pickNumber || 0));
   };
 
-  // Generate colors dynamically based on position
-  const teamColors = [
-    "border-l-secondary",
-    "border-l-primary", 
-    "border-l-accent",
-    "border-l-success",
-    "border-l-destructive",
-    "border-l-warning",
-  ];
-  
-  const getPlayerColor = (index: number) => teamColors[index % teamColors.length];
+  const visibleContestants = tribeFilter
+    ? availableContestants.filter((c) => c.tribe === tribeFilter)
+    : availableContestants;
+
+  const castawayDetails = (c: Contestant) =>
+    [c.age ? String(c.age) : null, c.location, c.tribe].filter(Boolean).join(" · ");
+
+  const upNextNote = (() => {
+    if (!currentDrafter || !nextDrafter) return null;
+    if (nextDrafter === currentDrafter) return `${currentDrafter} picks again right after this (snake).`;
+    return `${nextDrafter} is up next.`;
+  })();
 
   return (
     <div className="container max-w-7xl mx-auto p-4 md:p-8 space-y-6">
-      <div className="text-center space-y-4">
-        <h1 className="font-display text-4xl md:text-5xl leading-none text-primary">
-          {gameType === "winner_takes_all" 
-            ? (picksPerTeam > 1 ? "Pick your Sole Survivor predictions" : "Pick your Sole Survivor") 
-            : "Draft in progress"}
-        </h1>
-        
-        {!isDraftComplete && currentDrafter && (
-          <div className="space-y-3">
-            <div className="glass-strong p-6 rounded-2xl inline-block ring-4 ring-accent shadow-2xl">
-              <p className="text-muted-foreground text-sm mb-1">Current Pick</p>
-              <p className="text-4xl font-bold text-foreground">{currentDrafter}</p>
-              <p className="text-accent text-lg mt-1">Pick #{currentDraftIndex + 1} of {totalPicks}</p>
+      {/* On the clock */}
+      {!isDraftComplete && currentDrafter && (
+        <section className="plank overflow-hidden" aria-live="polite">
+          <div className="bg-accent text-accent-foreground px-5 py-5 sm:px-6">
+            <p className="label-caps opacity-90 tabular">
+              {gameType === "winner_takes_all" ? "Sole Survivor picks" : `Round ${round}`} · Pick {currentDraftIndex + 1} of {totalPicks}
+            </p>
+            <h1 className="font-display text-4xl sm:text-5xl leading-[0.95] mt-2 break-words">
+              {isMyPick ? `Your pick, ${currentDrafter}` : `${currentDrafter} is on the clock`}
+            </h1>
+            {upNextNote && <p className="mt-2 text-sm font-semibold opacity-90">{upNextNote}</p>}
+          </div>
+          <div className="flex flex-wrap items-center gap-3 px-5 py-3 sm:px-6">
+            <div className="flex-1 min-w-[160px]">
+              <Progress value={progress} className="h-2.5" aria-label="Draft progress" />
+              <p className="mt-1 text-xs font-semibold text-muted-foreground tabular">
+                {currentDraftIndex} of {totalPicks} picks made
+              </p>
             </div>
             {currentDraftIndex > 0 && (
-              <Button
-                onClick={onUndoPick}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
+              <Button onClick={onUndoPick} variant="outline" size="sm" className="h-11 gap-2">
                 <Undo2 className="h-4 w-4" />
-                Undo Last Pick
+                Undo last pick
+              </Button>
+            )}
+            {isLeagueAdmin && onManualAssign && onManualFinalize && (
+              <Button onClick={() => setManualMode((v) => !v)} variant="ghost" size="sm" className="h-11 gap-2">
+                <Settings2 className="h-4 w-4" />
+                {manualMode ? "Back to the draft" : "Assign teams by hand"}
               </Button>
             )}
           </div>
-        )}
+        </section>
+      )}
 
-        {isDraftComplete && (
-          <div className="glass-strong p-6 rounded-2xl inline-block">
-            <p className="text-3xl font-bold text-success">Draft Complete! 🎉</p>
+      {/* Draft complete */}
+      {isDraftComplete && (
+        <section className="plank px-5 py-6 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <p className="label-caps text-success">All {totalPicks} picks are in</p>
+            <h1 className="font-display text-4xl leading-none mt-1 text-primary">Draft complete</h1>
           </div>
-        )}
-
-        <div className="max-w-md mx-auto space-y-2">
-          <Progress value={progress} className="h-3" />
-          <p className="text-sm text-muted-foreground">
-            {currentDraftIndex} / {totalPicks} picks complete
-          </p>
-        </div>
-
-        {/* Commissioner manual assignment toggle */}
-        {isLeagueAdmin && !isDraftComplete && onManualAssign && onManualFinalize && (
-          <Button
-            onClick={() => setManualMode((v) => !v)}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <Settings2 className="h-4 w-4" />
-            {manualMode ? "Switch to Draft" : "Commissioner: Assign Teams Manually"}
+          <Button onClick={onStartGame} size="lg" variant="accent" className="gap-2">
+            Start the game
+            <ArrowRight className="h-5 w-5" />
           </Button>
-        )}
-      </div>
+        </section>
+      )}
 
       {/* Manual Assignment Mode */}
       {manualMode && onManualAssign && onManualFinalize ? (
@@ -191,66 +208,17 @@ export const DraftMode = ({
         />
       ) : (
       <>
-      {/* Team Display */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {draftOrder.map((player, index) => {
-          const playerTeam = getPlayerContestants(player);
-          const isCurrentDrafter = player === currentDrafter;
-
-          return (
-            <Card
-              key={`${String(player)}-${index}`}
-              className={`glass p-4 space-y-3 transition-all ${
-                isCurrentDrafter ? "ring-4 ring-accent scale-105" : ""
-              } border-l-4 ${getPlayerColor(index)}`}
-            >
-              <div className="flex items-center gap-3">
-                <TeamAvatar 
-                  teamName={String(player)} 
-                  avatarUrl={teamAvatarMap[player]} 
-                  size="md"
-                  className="border-2 border-border shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-bold truncate">{player}</h3>
-                </div>
-                <span className="text-sm glass-strong px-2 py-1 rounded-full shrink-0">
-                  {playerTeam.length}/{picksPerTeam}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {playerTeam.map((contestant) => (
-                  <div
-                    key={contestant.id}
-                    className="glass-strong p-2 rounded-lg text-sm flex items-center gap-2"
-                  >
-                    <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="xs" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{contestant.name}</p>
-                      <div className="text-xs text-muted-foreground space-y-0.5">
-                        {contestant.tribe && <p>Tribe: {contestant.tribe}</p>}
-                        {contestant.age && <p>Age: {contestant.age}</p>}
-                        {contestant.location && <p className="truncate">{contestant.location}</p>}
-                        <p>Pick #{contestant.pickNumber}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Available Contestants */}
+      {/* Available castaways (first on phones, where the picking happens) */}
       {!isDraftComplete && (
-        <Card className="glass p-6 space-y-4">
-          <h2 className="text-2xl font-bold">Available Contestants</h2>
-          
+        <section className="plank p-4 sm:p-6 space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <h2 className="font-display text-3xl leading-none">Available castaways</h2>
+            <span className="label-caps text-muted-foreground tabular">{availableContestants.length} left</span>
+          </div>
+
           {availableContestants.length === 0 && contestants.length === 0 ? (
             <div className="text-center py-8 space-y-2">
-              <p className="text-muted-foreground">No contestants have been added yet.</p>
+              <p className="font-display text-2xl leading-none">No castaways yet</p>
               {isLeagueAdmin && onImportOfficialCast ? (
                 <>
                   <p className="text-sm text-muted-foreground">
@@ -258,6 +226,7 @@ export const DraftMode = ({
                   </p>
                   <Button
                     className="mt-2"
+                    variant="accent"
                     disabled={importingCast}
                     onClick={async () => {
                       setImportingCast(true);
@@ -276,43 +245,119 @@ export const DraftMode = ({
               )}
             </div>
           ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {availableContestants.map((contestant) => (
-              <Button
-                key={contestant.id}
-                onClick={() => handleDraftContestant(contestant.id)}
-                disabled={isDrafting}
-                variant="glass"
-                className="h-auto py-4 flex-col items-center hover:scale-105 transition-transform gap-2"
-              >
-                <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="md" />
-                <p className="font-bold text-base truncate w-full text-center">{contestant.name}</p>
-                <div className="text-xs text-muted-foreground text-center space-y-0.5">
-                  {contestant.age && <p>Age: {contestant.age}</p>}
-                  {contestant.location && <p className="truncate">{contestant.location}</p>}
-                  {contestant.tribe && <p>Tribe: {contestant.tribe}</p>}
-                </div>
-              </Button>
-            ))}
-          </div>
+          <>
+            {tribes.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter by tribe">
+                {[null, ...tribes].map((tribe) => {
+                  const active = tribeFilter === tribe;
+                  return (
+                    <button
+                      key={tribe ?? "all"}
+                      type="button"
+                      onClick={() => setTribeFilter(tribe)}
+                      aria-pressed={active}
+                      className={`min-h-[40px] shrink-0 rounded-full px-4 text-sm font-bold transition-colors ${
+                        active
+                          ? "bg-primary text-primary-foreground border-2 border-plank"
+                          : "glass text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {tribe ?? "All tribes"}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {visibleContestants.map((contestant) => (
+                <li
+                  key={contestant.id}
+                  className="glass rounded-[12px] flex items-center gap-3 p-2.5 min-h-[60px]"
+                >
+                  <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-extrabold leading-tight truncate">{contestant.name}</p>
+                    {castawayDetails(contestant) && (
+                      <p className="text-xs text-muted-foreground truncate">{castawayDetails(contestant)}</p>
+                    )}
+                  </div>
+                  <Button
+                    onClick={() => handleDraftContestant(contestant.id)}
+                    disabled={isDrafting}
+                    variant={isMyPick ? "accent" : "outline"}
+                    size="sm"
+                    className="h-11 px-4 shrink-0"
+                    aria-label={`Draft ${contestant.name}`}
+                  >
+                    Draft
+                  </Button>
+                </li>
+              ))}
+              {visibleContestants.length === 0 && (
+                <li className="text-sm text-muted-foreground py-4">Everyone from {tribeFilter} has been drafted.</li>
+              )}
+            </ul>
+          </>
           )}
-        </Card>
+        </section>
       )}
 
-      {/* Start Game Button */}
-      {isDraftComplete && (
-        <div className="flex justify-center">
-          <Button
-            onClick={onStartGame}
-            size="lg"
-            variant="accent"
-            className="text-xl px-12 py-6"
-          >
-            Start Game
-            <ArrowRight className="ml-2 h-6 w-6" />
-          </Button>
+      {/* Teams */}
+      <section className="space-y-3">
+        <h2 className="font-display text-3xl leading-none">Tribes so far</h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {draftOrder.map((player, index) => {
+            const playerTeam = getPlayerContestants(player);
+            const isCurrentDrafter = player === currentDrafter;
+
+            return (
+              <Card
+                key={`${String(player)}-${index}`}
+                className={`p-4 space-y-3 ${isCurrentDrafter ? "border-accent" : ""}`}
+              >
+                <div className="flex items-center gap-3">
+                  <TeamAvatar
+                    teamName={String(player)}
+                    avatarUrl={teamAvatarMap[player]}
+                    size="md"
+                    className="shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display text-2xl leading-[0.95] break-words">{player}</h3>
+                    {isCurrentDrafter && (
+                      <span className="mt-1 inline-block rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-accent-foreground">
+                        On the clock
+                      </span>
+                    )}
+                  </div>
+                  <span className="glass rounded-full px-2.5 py-1 text-sm font-extrabold tabular shrink-0">
+                    {playerTeam.length}/{picksPerTeam}
+                  </span>
+                </div>
+
+                {playerTeam.length > 0 ? (
+                  <ul className="divide-y divide-border">
+                    {playerTeam.map((contestant) => (
+                      <li key={contestant.id} className="flex items-center gap-2 py-2">
+                        <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold truncate">{contestant.name}</p>
+                          {castawayDetails(contestant) && (
+                            <p className="text-xs text-muted-foreground truncate">{castawayDetails(contestant)}</p>
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-muted-foreground tabular shrink-0">#{contestant.pickNumber}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No picks yet.</p>
+                )}
+              </Card>
+            );
+          })}
         </div>
-      )}
+      </section>
       </>
       )}
     </div>

@@ -30,11 +30,12 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Check if user is super_admin OR has admin role in user_roles
+    // Only the platform super admin (site owner) may list, create, delete or promote accounts.
+    // The old user_roles 'admin' role no longer unlocks this function: it could be handed out
+    // from a league's Admin tab by mistake and would expose every account's email.
     const { data: isSuperAdmin } = await supabaseAdmin.rpc('is_super_admin', { _user_id: user.id })
-    const { data: hasAdminRole } = await supabaseAdmin.rpc('has_role', { _user_id: user.id, _role: 'admin' })
 
-    if (!isSuperAdmin && !hasAdminRole) {
+    if (!isSuperAdmin) {
       console.error('User is not admin')
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,

@@ -55,7 +55,7 @@ export function EmojiPicker({ value, onChange, disabled }: EmojiPickerProps) {
                     key={emoji}
                     type="button"
                     onClick={() => handleSelect(emoji)}
-                    className={`w-8 h-8 text-lg rounded hover:bg-accent transition-colors flex items-center justify-center ${
+                    className={`w-8 h-8 text-lg rounded hover:bg-muted transition-colors flex items-center justify-center ${
                       value === emoji ? "bg-accent ring-2 ring-primary" : ""
                     }`}
                   >

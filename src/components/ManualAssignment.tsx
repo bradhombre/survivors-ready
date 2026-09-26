@@ -90,9 +90,9 @@ export const ManualAssignment = ({
   };
 
   return (
-    <Card className="glass p-6 space-y-6">
+    <Card className="p-4 sm:p-6 space-y-6">
       <div className="space-y-1">
-        <h2 className="text-2xl font-bold">Manual Team Assignment</h2>
+        <h2 className="font-display text-3xl leading-none">Assign teams by hand</h2>
         <p className="text-muted-foreground text-sm">
           Assign each contestant to a team using the dropdowns, then finalize.
           Each team can have up to {picksPerTeam} contestant{picksPerTeam !== 1 ? "s" : ""}.
@@ -104,12 +104,12 @@ export const ManualAssignment = ({
         {draftOrder.map((team) => (
           <span
             key={String(team)}
-            className={`text-xs px-3 py-1 rounded-full font-medium ${
+            className={`text-xs px-3 py-1.5 rounded-full font-bold tabular ${
               teamCounts[team] > picksPerTeam
-                ? "bg-destructive/20 text-destructive"
+                ? "bg-destructive text-destructive-foreground"
                 : teamCounts[team] === picksPerTeam
-                ? "bg-success/20 text-success"
-                : "glass-strong"
+                ? "bg-success text-success-foreground"
+                : "glass"
             }`}
           >
             {team}: {teamCounts[team]}/{picksPerTeam}
@@ -118,15 +118,15 @@ export const ManualAssignment = ({
       </div>
 
       {/* Contestant list */}
-      <div className="space-y-2">
+      <div className="divide-y divide-border">
         {contestants.map((contestant) => (
           <div
             key={contestant.id}
-            className="glass-strong p-3 rounded-lg flex items-center gap-3"
+            className="py-2.5 flex items-center gap-3 min-h-[56px]"
           >
             <ContestantAvatar name={contestant.name} imageUrl={contestant.imageUrl} size="sm" />
             <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{contestant.name}</p>
+              <p className="font-bold truncate">{contestant.name}</p>
               {contestant.tribe && (
                 <p className="text-xs text-muted-foreground">{contestant.tribe}</p>
               )}
@@ -135,7 +135,7 @@ export const ManualAssignment = ({
               value={assignments[contestant.id] || "__unassigned__"}
               onValueChange={(v) => handleChange(contestant.id, v)}
             >
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[150px] sm:w-[180px]" aria-label={`Team for ${contestant.name}`}>
                 <SelectValue placeholder="Unassigned" />
               </SelectTrigger>
               <SelectContent>
@@ -158,15 +158,15 @@ export const ManualAssignment = ({
         ))}
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex sm:justify-end">
         <Button
           onClick={handleFinalize}
           disabled={!canFinalize || isSaving}
           variant="accent"
           size="lg"
-          className="gap-2"
+          className="gap-2 w-full sm:w-auto"
         >
-          {isSaving ? "Saving..." : "Finalize & Start Game"}
+          {isSaving ? "Saving..." : "Save teams and start the game"}
           <ArrowRight className="h-5 w-5" />
         </Button>
       </div>

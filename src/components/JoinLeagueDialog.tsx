@@ -150,21 +150,23 @@ export function JoinLeagueDialog({ open, onOpenChange, onSuccess }: JoinLeagueDi
         {step === 1 ? (
           <>
             <DialogHeader>
-              <DialogTitle>Join a League</DialogTitle>
+              <DialogTitle>Join a league</DialogTitle>
               <DialogDescription>
-                Enter the 6-character invite code shared by the league admin.
+                Enter the 6-character invite code your commissioner shared.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleJoinLeague} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="invite-code">Invite Code</Label>
+                <Label htmlFor="invite-code" className="label-caps text-muted-foreground">Invite code</Label>
                 <Input
                   id="invite-code"
                   placeholder="e.g., ABC123"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   maxLength={6}
-                  className="font-mono text-center text-lg tracking-widest"
+                  className="h-14 text-center text-2xl font-black uppercase tracking-[0.3em] tabular"
+                  autoCapitalize="characters"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -172,8 +174,8 @@ export function JoinLeagueDialog({ open, onOpenChange, onSuccess }: JoinLeagueDi
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'Joining...' : 'Join League'}
+                <Button type="submit" variant="accent" disabled={loading}>
+                  {loading ? 'Joining...' : 'Join league'}
                 </Button>
               </div>
             </form>
@@ -182,11 +184,11 @@ export function JoinLeagueDialog({ open, onOpenChange, onSuccess }: JoinLeagueDi
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-success" />
-                Welcome! Customize Your Team
+                <CheckCircle2 className="h-6 w-6 shrink-0 text-success" />
+                You're in
               </DialogTitle>
               <DialogDescription>
-                You've been assigned to "{originalTeamName}". Personalize your team with a name and photo!
+                You've got the "{originalTeamName}" spot. Give your team a name and a photo, or do it later.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-6 py-4">
@@ -206,7 +208,7 @@ export function JoinLeagueDialog({ open, onOpenChange, onSuccess }: JoinLeagueDi
 
               {/* Team name */}
               <div className="space-y-2">
-                <Label htmlFor="team-name">Team Name</Label>
+                <Label htmlFor="team-name" className="label-caps text-muted-foreground">Team name</Label>
                 <Input
                   id="team-name"
                   placeholder="e.g., The Tribal Council"
@@ -220,7 +222,7 @@ export function JoinLeagueDialog({ open, onOpenChange, onSuccess }: JoinLeagueDi
               <Button type="button" variant="ghost" onClick={handleSkip}>
                 Skip for now
               </Button>
-              <Button onClick={handleSaveTeam} disabled={savingTeam || !teamName.trim()}>
+              <Button variant="accent" onClick={handleSaveTeam} disabled={savingTeam || !teamName.trim()}>
                 {savingTeam ? 'Saving...' : 'Done'}
               </Button>
             </div>

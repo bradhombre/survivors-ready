@@ -9,17 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Shield, Trash2, UserPlus, AlertTriangle, RefreshCw, Edit, Users, Settings, Scale, Database } from 'lucide-react';
-import { UserPlayerMappingSection } from './UserPlayerMappingSection';
 import { ScoringSettings } from './ScoringSettings';
 import { SetupMode } from './SetupMode';
 import { Contestant, DraftType, Player } from '@/types/survivor';
 import { getPicksPerTeam } from '@/lib/picksPerTeam';
-
-type UserWithRole = {
-  id: string;
-  email: string;
-  role: 'admin' | 'user';
-};
 
 type ContestantRow = {
   id: string;
@@ -91,27 +84,14 @@ export function AdminPanel({
   onRevertToSetup,
   onScoringConfigSaved,
 }: AdminPanelProps) {
-  const [users, setUsers] = useState<UserWithRole[]>([]);
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserPassword, setNewUserPassword] = useState('');
   const [selectedEpisode, setSelectedEpisode] = useState(currentEpisode);
   const [isLoading, setIsLoading] = useState(false);
   const [contestantRows, setContestantRows] = useState<ContestantRow[]>([]);
   const [editingContestant, setEditingContestant] = useState<string | null>(null);
 
   useEffect(() => {
-    // Only load platform users if the current user is a platform super_admin
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
-        if (isSuperAdmin) {
-          loadUsers();
-        }
-      }
-      loadContestants();
-    };
-    init();
+    // Sitewide user management lives on the site admin page (/admin), not in a league's Admin tab
+    loadContestants();
   }, []);
 
   const loadContestants = async () => {
@@ -133,84 +113,6 @@ export function AdminPanel({
 
     if (!error && data) {
       setContestantRows(data);
-    }
-  };
-
-  const loadUsers = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'listUsers' }
-      });
-
-      if (!error && data?.data) {
-        setUsers(data.data);
-      }
-    } catch {
-      // Silently skip if user lacks platform admin permissions
-    }
-  };
-
-  const createUser = async () => {
-    if (!newUserEmail || !newUserPassword) {
-      toast.error('Please enter email and password');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.functions.invoke('admin-users', {
-        body: { 
-          action: 'createUser',
-          email: newUserEmail,
-          password: newUserPassword
-        }
-      });
-
-      if (error) throw error;
-
-      toast.success(`User created: ${newUserEmail}`);
-      setNewUserEmail('');
-      setNewUserPassword('');
-      loadUsers();
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const toggleAdmin = async (userId: string, currentRole: 'admin' | 'user') => {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    const action = currentRole === 'admin' ? 'removeAdminRole' : 'addAdminRole';
-
-    const { error } = await supabase.functions.invoke('admin-users', {
-      body: { action, userId }
-    });
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    toast.success(`Role updated to ${newRole}`);
-    loadUsers();
-  };
-
-  const deleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-
-    const { error } = await supabase.functions.invoke('admin-users', {
-      body: { action: 'deleteUser', userId }
-    });
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('User deleted');
-      loadUsers();
     }
   };
 
@@ -525,87 +427,13 @@ export function AdminPanel({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="h-5 w-5 text-muted-foreground" />
-                  Invite new user
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-                  <Input
-                    placeholder="Email"
-                    aria-label="Email"
-                    value={newUserEmail}
-                    onChange={(e) => setNewUserEmail(e.target.value)}
-                  />
-                  <Input
-                    type="password"
-                    placeholder="Password"
-                    aria-label="Password"
-                    value={newUserPassword}
-                    onChange={(e) => setNewUserPassword(e.target.value)}
-                  />
-                  <Button onClick={createUser} disabled={isLoading}>
-                    Create user
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>All users</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="divide-y divide-border">
-                  {users.map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex flex-wrap items-center justify-between gap-3 py-3 min-h-[44px]"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-bold truncate">{user.email}</span>
-                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                          {user.role}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => toggleAdmin(user.id, user.role)}
-                        >
-                          <Shield className="h-4 w-4 mr-1" />
-                          {user.role === 'admin' ? 'Remove admin' : 'Make admin'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          aria-label={`Delete ${user.email}`}
-                          onClick={() => deleteUser(user.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-muted-foreground" />
-                  User-player assignments
+                  Members and co-commissioners
                 </CardTitle>
                 <CardDescription>
-                  Assign each user account to control a specific player
+                  Invite people, make someone a co-commissioner, or remove a member on the League tab. Only people in this league show up there.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <UserPlayerMappingSection users={users} onMappingUpdate={loadUsers} />
-              </CardContent>
             </Card>
 
             <Card>

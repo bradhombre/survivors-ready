@@ -31,8 +31,6 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        {/* Room for the fixed footer so it never covers the last row of content */}
-        <div aria-hidden="true" className="h-20" />
         <AppFooter />
         <BugResponseBanner />
       </BrowserRouter>

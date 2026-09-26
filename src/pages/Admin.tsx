@@ -14,8 +14,9 @@ import { NewsManager } from "@/components/admin/NewsManager";
 import { CastManager } from "@/components/admin/CastManager";
 import { AdminSettings } from "@/components/admin/AdminSettings";
 import { LeagueManager } from "@/components/admin/LeagueManager";
-import { ArrowLeft, Users, Newspaper, UserCircle, Settings, Bug, Sparkles, Send, Loader2, MessageSquare } from "lucide-react";
+import { ArrowLeft, Users, Newspaper, UserCircle, UserCog, Settings, Bug, Sparkles, Send, Loader2, MessageSquare } from "lucide-react";
 import { ChatMonitor } from "@/components/admin/ChatMonitor";
+import { UserManager } from "@/components/admin/UserManager";
 import { Lockup } from "@/components/Lockup";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -195,6 +196,10 @@ export default function Admin() {
                 <Bug className="h-4 w-4" />
                 Bugs <span className="tabular">({bugs.length})</span>
               </TabsTrigger>
+              <TabsTrigger value="accounts" className="gap-2">
+                <UserCog className="h-4 w-4" />
+                Accounts
+              </TabsTrigger>
               <TabsTrigger value="settings" className="gap-2">
                 <Settings className="h-4 w-4" />
                 Settings
@@ -346,6 +351,7 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="accounts"><UserManager /></TabsContent>
           <TabsContent value="settings"><AdminSettings /></TabsContent>
         </Tabs>
       </main>
