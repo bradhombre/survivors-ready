@@ -670,7 +670,7 @@ export const SetupMode = ({
           <h2 className="font-display text-3xl leading-none">Draft settings</h2>
 
           <div>
-            <Label className="label-caps text-muted-foreground">Draft order (drag to reorder)</Label>
+            <Label className="label-caps text-muted-foreground">Draft order (use the arrows to reorder)</Label>
             <div className="space-y-2 mt-2">
               {draftOrder.map((player, index) => {
                 const team = teamByName.get(String(player));
@@ -678,7 +678,7 @@ export const SetupMode = ({
 
                 return (
                   <div key={`${String(player)}-${index}`} className="glass rounded-[12px] p-3 min-h-[44px] flex items-center gap-3">
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                    <GripVertical className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     <span className="font-black tabular text-primary w-6">{index + 1}</span>
 
                     <div className="flex-1 min-w-0">

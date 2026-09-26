@@ -133,8 +133,10 @@ export const DraftMode = ({
       .sort((a, b) => (a.pickNumber || 0) - (b.pickNumber || 0));
   };
 
-  const visibleContestants = tribeFilter
-    ? availableContestants.filter((c) => c.tribe === tribeFilter)
+  // If the chosen tribe disappears (tribes edited mid-draft), fall back to everyone
+  const activeTribe = tribeFilter && tribes.includes(tribeFilter) ? tribeFilter : null;
+  const visibleContestants = activeTribe
+    ? availableContestants.filter((c) => c.tribe === activeTribe)
     : availableContestants;
 
   const castawayDetails = (c: Contestant) =>
@@ -249,7 +251,7 @@ export const DraftMode = ({
             {tribes.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter by tribe">
                 {[null, ...tribes].map((tribe) => {
-                  const active = tribeFilter === tribe;
+                  const active = activeTribe === tribe;
                   return (
                     <button
                       key={tribe ?? "all"}
@@ -294,7 +296,9 @@ export const DraftMode = ({
                 </li>
               ))}
               {visibleContestants.length === 0 && (
-                <li className="text-sm text-muted-foreground py-4">Everyone from {tribeFilter} has been drafted.</li>
+                <li className="text-sm text-muted-foreground py-4">
+                  {activeTribe ? `Everyone from ${activeTribe} has been drafted.` : "Everyone's been drafted."}
+                </li>
               )}
             </ul>
           </>

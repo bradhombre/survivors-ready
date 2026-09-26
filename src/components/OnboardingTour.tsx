@@ -17,10 +17,10 @@ interface OnboardingTourProps {
 
 const PLAYER_STEPS: TourStep[] = [
   {
-    target: "play",
-    title: "Play tab",
+    target: "game",
+    title: "Game tab",
     description:
-      "This is where your fantasy game lives. During the draft, you'll pick Survivor contestants for your team. Once the game starts, your commissioner scores events each episode.",
+      "This is where your fantasy game lives: the leaderboard, your castaways and every episode's points. During the draft you'll pick your castaways on the Draft tab.",
   },
   {
     target: "league",

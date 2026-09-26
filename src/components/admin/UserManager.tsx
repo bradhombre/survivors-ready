@@ -14,8 +14,9 @@ type SiteUser = {
 
 /**
  * Sitewide accounts, for the site owner only (lives on /admin).
- * "Site admin" is the old platform-wide `admin` role in user_roles: it can list every
- * account's email and create or delete accounts. It has nothing to do with running a league.
+ * "Site admin" is the old platform-wide `admin` role in user_roles, left over from the original
+ * single-league app. Since the 9/26 lockdown it grants nothing (admin-users and make_super_admin
+ * require the super admin), so it can only be removed here, never granted.
  * League commissioners are managed per league on the League tab.
  */
 export function UserManager() {
@@ -59,10 +60,11 @@ export function UserManager() {
     }
     setCreating(true);
     try {
-      const { error } = await supabase.functions.invoke('admin-users', {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
         body: { action: 'createUser', email: newEmail, password: newPassword },
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error.message ?? 'Could not create the account');
       toast.success(`Account created: ${newEmail}`);
       setNewEmail('');
       setNewPassword('');
@@ -74,31 +76,26 @@ export function UserManager() {
     }
   };
 
-  const toggleSiteAdmin = async (user: SiteUser) => {
-    const making = user.role !== 'admin';
-    const message = making
-      ? `Make ${user.email} a SITE admin?\n\nThis is not a league role. A site admin can see every account's email address and create or delete any account on Survivors Ready.\n\nTo make someone a co-commissioner of a league, use that league's League tab instead.`
-      : `Remove site admin from ${user.email}?`;
-    if (!confirm(message)) return;
-
-    const { error } = await supabase.functions.invoke('admin-users', {
-      body: { action: making ? 'addAdminRole' : 'removeAdminRole', userId: user.id },
+  const removeSiteAdmin = async (user: SiteUser) => {
+    if (!confirm(`Remove the old site admin role from ${user.email}?\n\nThis doesn't affect any league they play in or run.`)) return;
+    const { data, error } = await supabase.functions.invoke('admin-users', {
+      body: { action: 'removeAdminRole', userId: user.id },
     });
-    if (error) {
-      toast.error(error.message);
+    if (error || data?.error) {
+      toast.error(error?.message ?? data?.error?.message ?? 'Could not remove the role');
       return;
     }
-    toast.success(making ? `${user.email} is now a site admin` : `${user.email} is no longer a site admin`);
+    toast.success(`${user.email} is no longer a site admin`);
     loadUsers();
   };
 
   const deleteUser = async (user: SiteUser) => {
     if (!confirm(`Delete the account ${user.email}?\n\nThis removes their login for good. It cannot be undone.`)) return;
-    const { error } = await supabase.functions.invoke('admin-users', {
+    const { data, error } = await supabase.functions.invoke('admin-users', {
       body: { action: 'deleteUser', userId: user.id },
     });
-    if (error) {
-      toast.error(error.message);
+    if (error || data?.error) {
+      toast.error(error?.message ?? data?.error?.message ?? 'Could not delete the account');
     } else {
       toast.success('Account deleted');
       loadUsers();
@@ -114,7 +111,7 @@ export function UserManager() {
             All accounts
           </CardTitle>
           <CardDescription>
-            Every account on Survivors Ready. Only you can see this page. "Site admin" means full access to this page, not a league role.
+            Every account on Survivors Ready. Only you can see this page. "Site admin" is an old role from the first version of the app; it no longer grants anything, so remove it from anyone who has it.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -152,9 +149,11 @@ export function UserManager() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="h-10" onClick={() => toggleSiteAdmin(user)}>
-                      {user.role === 'admin' ? 'Remove site admin' : 'Make site admin'}
-                    </Button>
+                    {user.role === 'admin' && (
+                      <Button size="sm" variant="outline" className="h-10" onClick={() => removeSiteAdmin(user)}>
+                        Remove site admin
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"

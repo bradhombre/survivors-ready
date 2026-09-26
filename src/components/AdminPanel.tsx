@@ -431,7 +431,7 @@ export function AdminPanel({
                   Members and co-commissioners
                 </CardTitle>
                 <CardDescription>
-                  Invite people, make someone a co-commissioner, or remove a member on the League tab. Only people in this league show up there.
+                  Everyone in this league is listed on the League tab, with the invite code. The league owner can make someone a co-commissioner or remove a member there.
                 </CardDescription>
               </CardHeader>
             </Card>
