@@ -15,6 +15,13 @@
       "when": 1790379911213,
       "tag": "0001_security_and_season_fixes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790486709155,
+      "tag": "0002_league_health_and_archive",
+      "breakpoints": true
     }
   ]
 }

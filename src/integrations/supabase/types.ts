@@ -428,6 +428,7 @@ export type Database = {
       leagues: {
         Row: {
           allow_player_scoring: boolean
+          archived_at: string | null
           auto_renew: boolean
           created_at: string | null
           id: string
@@ -441,6 +442,7 @@ export type Database = {
         }
         Insert: {
           allow_player_scoring?: boolean
+          archived_at?: string | null
           auto_renew?: boolean
           created_at?: string | null
           id?: string
@@ -454,6 +456,7 @@ export type Database = {
         }
         Update: {
           allow_player_scoring?: boolean
+          archived_at?: string | null
           auto_renew?: boolean
           created_at?: string | null
           id?: string
@@ -718,6 +721,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_league_health: {
+        Args: never
+        Returns: {
+          archived_at: string
+          cast_count: number
+          created_at: string
+          current_season: number
+          drafted_count: number
+          episode: number
+          ever_drafted: boolean
+          ever_scored: boolean
+          game_type: string
+          id: string
+          last_activity_at: string
+          last_member_sign_in: string
+          member_count: number
+          mode: string
+          name: string
+          owner_email: string
+          owner_id: string
+          scored_episodes: number
+          season: number
+          season_scoring_events: number
+          stage: string
+        }[]
+      }
+      admin_set_league_archived: {
+        Args: { archive: boolean; league_ids: string[] }
+        Returns: number
+      }
       claim_team: {
         Args: { team_id: string }
         Returns: {
@@ -740,6 +773,7 @@ export type Database = {
         Args: { league_name: string }
         Returns: {
           allow_player_scoring: boolean
+          archived_at: string | null
           auto_renew: boolean
           created_at: string | null
           id: string
