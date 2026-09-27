@@ -150,8 +150,8 @@ export const DraftMode = ({
 
   return (
     <div className="container max-w-7xl mx-auto p-4 md:p-8 space-y-6">
-      {/* On the clock */}
-      {!isDraftComplete && currentDrafter && (
+      {/* On the clock (hidden until there's a cast to pick from) */}
+      {!isDraftComplete && currentDrafter && contestants.length > 0 && (
         <section className="plank overflow-hidden" aria-live="polite">
           <div className="bg-accent text-accent-foreground px-5 py-5 sm:px-6">
             <p className="label-caps opacity-90 tabular">
@@ -308,7 +308,7 @@ export const DraftMode = ({
 
       {/* Teams */}
       <section className="space-y-3">
-        <h2 className="font-display text-3xl leading-none">Tribes so far</h2>
+        <h2 className="font-display text-3xl leading-none">{gameType === "winner_takes_all" ? "Picks so far" : "Tribes so far"}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {draftOrder.map((player, index) => {
             const playerTeam = getPlayerContestants(player);

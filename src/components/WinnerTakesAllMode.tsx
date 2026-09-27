@@ -236,12 +236,19 @@ export function WinnerTakesAllMode({
                 <div className="mt-4 space-y-2 border-t-2 border-border pt-3">
                   {picks.map(pick => (
                     <div key={pick.id} className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-muted-foreground truncate min-w-0 flex-shrink">{pick.name}</span>
+                      <span className="flex-1 min-w-0 truncate text-sm font-semibold text-muted-foreground">{pick.name}</span>
                       <Button
                         size="sm"
-                        variant={pick.isEliminated ? "outline" : "destructive"}
-                        className="h-11 flex-1 text-sm"
-                        onClick={() => handleToggleElimination(pick)}
+                        variant="outline"
+                        className={`h-10 px-4 text-sm ${
+                          pick.isEliminated
+                            ? ""
+                            : "border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        }`}
+                        onClick={() => {
+                          if (!pick.isEliminated && !confirm(`Mark ${pick.name} as voted out?`)) return;
+                          handleToggleElimination(pick);
+                        }}
                       >
                         {pick.isEliminated ? "Undo" : "Eliminate"}
                       </Button>
@@ -249,7 +256,7 @@ export function WinnerTakesAllMode({
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-11 bg-warning text-sm text-warning-foreground hover:bg-warning/90"
+                          className="h-10 bg-warning text-sm text-warning-foreground hover:bg-warning/90"
                           onClick={() => handleCrownWinner(pick)}
                         >
                           <Crown className="h-4 w-4" />
