@@ -159,7 +159,7 @@ export const HistoryMode = ({ archivedSeasons, playerProfiles }: HistoryModeProp
         </div>
 
         {/* Season Stats */}
-        <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
           <Card className="flex items-center gap-4 p-4 sm:block sm:p-5 sm:space-y-2">
             <Users className="h-6 w-6 shrink-0 text-muted-foreground" aria-hidden="true" />
             <p className="text-3xl font-black leading-none tabular">{selectedSeason.contestants.length}</p>
@@ -191,7 +191,7 @@ export const HistoryMode = ({ archivedSeasons, playerProfiles }: HistoryModeProp
             return (
               <Card key={player} className="p-5 sm:p-6 space-y-4">
                 <h3 className="font-display text-2xl leading-none">{player}'s team</h3>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {playerContestants.map((contestant) => (
                     <div
                       key={contestant.id}

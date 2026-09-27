@@ -299,6 +299,13 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     };
   }, []);
 
+  // Ids of this session's scoring events, so we can recognize their DELETE events.
+  // (Supabase realtime can't apply a session_id filter to deletes; they only carry the row id.)
+  const scoringEventIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    scoringEventIdsRef.current = new Set(state.scoringEvents.map((e) => e.id));
+  }, [state.scoringEvents]);
+
   // Set up realtime subscriptions
   useEffect(() => {
     if (!sessionId) return;
@@ -334,6 +341,14 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
         "postgres_changes",
         { event: "*", schema: "public", table: "player_profiles", filter: `session_id=eq.${sessionId}` },
         debouncedReload
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "scoring_events" },
+        (payload) => {
+          const id = (payload.old as { id?: string } | null)?.id;
+          if (id && scoringEventIdsRef.current.has(id)) debouncedReload();
+        }
       )
       .subscribe();
 
@@ -696,6 +711,9 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
         .update({ is_eliminated: false })
         .eq("id", lastEvent.contestantId);
     }
+
+    // Deletes don't always come back through realtime, so refresh now
+    debouncedReload();
   };
 
   const undoEvent = async (eventId: string) => {
@@ -721,6 +739,9 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
         .update({ is_eliminated: false })
         .eq("id", event.contestantId);
     }
+
+    // Deletes don't always come back through realtime, so refresh now
+    debouncedReload();
   };
 
   const exportData = () => {

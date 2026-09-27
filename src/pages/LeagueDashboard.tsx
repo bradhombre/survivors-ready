@@ -401,7 +401,7 @@ const LeagueDashboard = () => {
       {viewMode === "draft" && !canShowGame && (
         <>
           {isLeagueAdmin && state.contestants.some(c => c.owner) && (
-            <div className="container max-w-7xl mx-auto px-4 mt-4">
+            <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
               <div className="flex flex-wrap items-center gap-3 rounded-[12px] border-2 border-accent bg-accent/10 px-4 py-3">
                 <Undo2 className="h-4 w-4 text-accent shrink-0" />
                 <span className="text-sm font-semibold flex-1 min-w-[180px]">Draft in progress. Need to start over?</span>
@@ -445,7 +445,7 @@ const LeagueDashboard = () => {
         <>
           <GameplayTips leagueId={leagueId!} />
           {!canShowGame && !isSuperAdmin && (
-            <div className="container max-w-7xl mx-auto px-4 mt-4">
+            <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
               <div className="glass rounded-[12px] flex items-center gap-3 px-4 py-3 text-sm">
                 <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span>Scoring opens once the draft is done. Look around to see how it works.</span>

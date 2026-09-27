@@ -184,9 +184,9 @@ export default function Leagues() {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'super_admin':
-        return 'Super Admin';
+        return 'Site owner';
       case 'league_admin':
-        return 'League Admin';
+        return 'Commissioner';
       case 'moderator':
         return 'Moderator';
       case 'player':
@@ -211,7 +211,7 @@ export default function Leagues() {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading leagues...</div>
+        <div className="label-caps text-muted-foreground" role="status">Loading your leagues…</div>
       </div>
     );
   }
@@ -219,7 +219,7 @@ export default function Leagues() {
   return (
     <div className="min-h-screen">
       <header className="bg-header">
-        <div className="container mx-auto px-4 pt-4 pb-5 flex justify-between items-start gap-3">
+        <div className="container max-w-5xl mx-auto px-4 pt-4 pb-5 flex justify-between items-start gap-3">
           <div className="flex flex-col gap-2 min-w-0">
             <Lockup className="text-2xl sm:text-3xl" />
             <h1 className="label-caps text-header-label">My leagues</h1>
@@ -242,12 +242,12 @@ export default function Leagues() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
+                  Sign out
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteOpen(true)}>
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Account
+                  Delete account
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -256,37 +256,37 @@ export default function Leagues() {
       </header>
       <div className="buff-trim" aria-hidden="true" />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container max-w-5xl mx-auto px-4 py-8">
         <div className="flex gap-3 mb-8">
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Create League
+            Start a league
           </Button>
           <Button variant="outline" onClick={() => setJoinOpen(true)}>
             <Users className="h-4 w-4 mr-2" />
-            Join League
+            Join a league
           </Button>
         </div>
 
         {memberships.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
             <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold text-foreground mb-3">Welcome to Survivors Ready!</h2>
+              <h2 className="font-display text-4xl leading-none text-primary mb-3">Welcome to camp</h2>
               <p className="text-muted-foreground text-lg max-w-md mx-auto">
                 Draft contestants, earn points, and compete with friends to see who has the best Survivor instincts.
               </p>
             </div>
             
-            <div className="grid gap-6 sm:grid-cols-2 max-w-2xl w-full">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 max-w-2xl w-full">
               <Card 
-                className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg group"
+                className="cursor-pointer transition-colors hover:bg-muted group"
                 onClick={() => setCreateOpen(true)}
               >
                 <CardHeader className="text-center pb-2">
                   <div className="mx-auto mb-3 h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                     <Crown className="h-7 w-7 text-primary" />
                   </div>
-                  <CardTitle className="text-xl">Create a League</CardTitle>
+                  <CardTitle className="text-2xl">Start a league</CardTitle>
                 </CardHeader>
                 <CardContent className="text-center">
                   <p className="text-muted-foreground text-sm mb-4">
@@ -294,20 +294,20 @@ export default function Leagues() {
                   </p>
                   <Button className="w-full">
                     <Plus className="h-4 w-4 mr-2" />
-                    Create League
+                    Start a league
                   </Button>
                 </CardContent>
               </Card>
 
               <Card 
-                className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg group"
+                className="cursor-pointer transition-colors hover:bg-muted group"
                 onClick={() => setJoinOpen(true)}
               >
                 <CardHeader className="text-center pb-2">
                   <div className="mx-auto mb-3 h-14 w-14 rounded-full bg-secondary/50 flex items-center justify-center group-hover:bg-secondary transition-colors">
                     <Users className="h-7 w-7 text-secondary-foreground" />
                   </div>
-                  <CardTitle className="text-xl">Join a League</CardTitle>
+                  <CardTitle className="text-2xl">Join a league</CardTitle>
                 </CardHeader>
                 <CardContent className="text-center">
                   <p className="text-muted-foreground text-sm mb-4">
@@ -315,24 +315,24 @@ export default function Leagues() {
                   </p>
                   <Button variant="outline" className="w-full">
                     <Users className="h-4 w-4 mr-2" />
-                    Join League
+                    Join a league
                   </Button>
                 </CardContent>
               </Card>
             </div>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {memberships.map((membership) => (
               membership.leagues && (
                 <Card 
                   key={membership.id}
-                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  className="cursor-pointer transition-colors hover:bg-muted"
                   onClick={() => navigate(`/league/${membership.leagues!.id}`)}
                 >
                   <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg">{membership.leagues.name}</CardTitle>
+                    <div className="flex items-start justify-between gap-3">
+                      <CardTitle className="text-2xl leading-[0.95] break-words min-w-0">{membership.leagues.name}</CardTitle>
                       <div className="flex items-center gap-2">
                         <div className="flex flex-col items-end gap-1">
                           <Badge variant={getRoleVariant(membership.role)} className="flex items-center gap-1">
@@ -353,7 +353,8 @@ export default function Leagues() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 shrink-0"
+                                className="h-10 w-10 shrink-0"
+                                aria-label={`Options for ${membership.leagues.name}`}
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <MoreVertical className="h-4 w-4" />
@@ -368,7 +369,7 @@ export default function Leagues() {
                                 }}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete League
+                                Delete league
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -379,7 +380,7 @@ export default function Leagues() {
                   <CardContent>
                     {(membership.role === 'league_admin' || membership.role === 'super_admin') && (
                       <p className="text-xs text-muted-foreground">
-                        Invite code: <span className="font-mono">{membership.leagues.invite_code}</span>
+                        Invite code <span className="font-extrabold tracking-[0.15em] text-foreground tabular">{membership.leagues.invite_code}</span>
                       </p>
                     )}
                   </CardContent>
@@ -405,7 +406,7 @@ export default function Leagues() {
               disabled={deletingLeague}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deletingLeague ? 'Deleting...' : 'Delete League'}
+              {deletingLeague ? 'Deleting...' : 'Delete league'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

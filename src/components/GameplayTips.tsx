@@ -48,48 +48,50 @@ export function GameplayTips({ leagueId }: GameplayTipsProps) {
   };
 
   return (
-    <Card className="mx-4 mt-4 max-w-7xl lg:mx-auto">
-      <CardHeader className="p-5 pb-3 flex flex-row items-start justify-between gap-3 space-y-0">
-        <div className="space-y-1.5">
-          <p className="label-caps flex items-center gap-1.5 text-muted-foreground">
-            <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
-            Tips
-          </p>
-          <CardTitle>How the game works</CardTitle>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleDismiss}
-          className="-mr-2 -mt-2 shrink-0 text-muted-foreground hover:text-foreground"
-          aria-label="Dismiss tips"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </CardHeader>
-      <CardContent className="p-5 pt-0">
-        <div className="grid gap-2 sm:grid-cols-2">
-          {TIPS.map((tip) => {
-            const Icon = tip.icon;
-            return (
-              <div key={tip.title} className="glass rounded-[12px] flex items-start gap-3 p-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold">{tip.title}</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">{tip.description}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-4 flex justify-end">
-          <Button variant="outline" onClick={handleDismiss}>
-            Got it
+    <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
+      <Card>
+        <CardHeader className="p-5 pb-3 flex flex-row items-start justify-between gap-3 space-y-0">
+          <div className="space-y-1.5">
+            <p className="label-caps flex items-center gap-1.5 text-muted-foreground">
+              <Lightbulb className="h-3.5 w-3.5" aria-hidden="true" />
+              Tips
+            </p>
+            <CardTitle>How the game works</CardTitle>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDismiss}
+            className="-mr-2 -mt-2 shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label="Dismiss tips"
+          >
+            <X className="h-4 w-4" />
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent className="p-5 pt-0">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {TIPS.map((tip) => {
+              const Icon = tip.icon;
+              return (
+                <div key={tip.title} className="glass rounded-[12px] flex items-start gap-3 p-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold">{tip.title}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{tip.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button variant="outline" onClick={handleDismiss}>
+              Got it
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

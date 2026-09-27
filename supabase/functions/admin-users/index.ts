@@ -61,32 +61,23 @@ Deno.serve(async (req) => {
         result = await supabaseAdmin.auth.admin.deleteUser(params.userId)
         break
 
-      case 'listUsers':
-        const { data: profiles } = await supabaseAdmin
-          .from('profiles')
-          .select('id, email')
-        
-        if (profiles) {
-          const usersWithRoles = await Promise.all(
-            profiles.map(async (profile) => {
-              const { data: roleData } = await supabaseAdmin
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', profile.id)
-                .single()
-
-              return {
-                id: profile.id,
-                email: profile.email,
-                role: roleData?.role || 'user',
-              }
-            })
-          )
-          result = { data: usersWithRoles, error: null }
-        } else {
-          result = { data: [], error: null }
+      case 'listUsers': {
+        // Two queries instead of one per account (the old loop took ~15s for ~600 accounts)
+        const [{ data: profiles }, { data: adminRows }] = await Promise.all([
+          supabaseAdmin.from('profiles').select('id, email').range(0, 9999),
+          supabaseAdmin.from('user_roles').select('user_id').eq('role', 'admin'),
+        ])
+        const adminIds = new Set((adminRows ?? []).map((r: { user_id: string }) => r.user_id))
+        result = {
+          data: (profiles ?? []).map((profile: { id: string; email: string }) => ({
+            id: profile.id,
+            email: profile.email,
+            role: adminIds.has(profile.id) ? 'admin' : 'user',
+          })),
+          error: null,
         }
         break
+      }
 
       case 'addAdminRole':
         result = await supabaseAdmin

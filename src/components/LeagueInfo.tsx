@@ -231,7 +231,7 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
     if (error) {
       toast.error("Failed to promote member");
     } else {
-      toast.success(`${memberEmail} promoted to admin`);
+      toast.success(`${memberEmail} is now a co-commissioner`);
       setMembers(prev => prev.map(m => 
         m.id === memberId ? { ...m, role: "league_admin" } : m
       ));
@@ -462,8 +462,8 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
                       Joined {formatDate(member.joined_at)}
                     </p>
                   </div>
-                  <Badge variant={getRoleBadgeVariant(member.role)} className="capitalize">
-                    {member.role.replace("_", " ")}
+                  <Badge variant={getRoleBadgeVariant(member.role)}>
+                    {member.role === "league_admin" ? "Commissioner" : member.role === "super_admin" ? "Site owner" : member.role === "player" ? "Player" : member.role.replace("_", " ")}
                   </Badge>
                   {isOwner && (
                     <div className="ml-auto">
@@ -473,6 +473,8 @@ export function LeagueInfo({ leagueId }: LeagueInfoProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => handlePromoteToAdmin(member.id, member.email)}
+                            title="Make co-commissioner"
+                            aria-label={`Make ${member.email} a co-commissioner`}
                           >
                             <ShieldPlus className="h-4 w-4" />
                             Promote

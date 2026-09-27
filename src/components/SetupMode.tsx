@@ -468,7 +468,7 @@ export const SetupMode = ({
   };
 
   return (
-    <div className="container max-w-6xl mx-auto p-4 md:p-8 space-y-8">
+    <div className="max-w-6xl mx-auto py-2 md:py-4 space-y-8">
       <div className="space-y-2">
         <p className="label-caps text-muted-foreground">Season <span className="tabular">{season}</span></p>
         <h1 className="font-display text-4xl md:text-5xl leading-none text-primary">
@@ -477,9 +477,9 @@ export const SetupMode = ({
         <p className="text-muted-foreground">Set up your season, then run the draft.</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Season & Quick Actions */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-4 sm:p-6 space-y-4">
           <h2 className="font-display text-3xl leading-none">Season</h2>
           
           <div>
@@ -517,7 +517,7 @@ export const SetupMode = ({
         </Card>
 
         {/* League Size & Members */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-display text-3xl leading-none">League size</h2>
             <span className="label-caps text-muted-foreground tabular">
@@ -666,7 +666,7 @@ export const SetupMode = ({
         </Card>
 
         {/* Draft Settings */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-4 sm:p-6 space-y-4">
           <h2 className="font-display text-3xl leading-none">Draft settings</h2>
 
           <div>
@@ -784,7 +784,7 @@ export const SetupMode = ({
       </div>
 
       {/* Add Contestants */}
-      <Card className="p-6 space-y-4">
+      <Card className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="font-display text-3xl leading-none">Add castaways</h2>
           <div className="flex gap-2 flex-wrap">
@@ -842,7 +842,7 @@ export const SetupMode = ({
             </div>
           </div>
         ) : (
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="name" className="label-caps text-muted-foreground">Name *</Label>
               <Input
@@ -899,11 +899,11 @@ export const SetupMode = ({
 
       {/* Contestants List */}
       {contestants.length > 0 && (
-        <Card className="p-6 space-y-4">
+        <Card className="p-4 sm:p-6 space-y-4">
           <h2 className="font-display text-3xl leading-none">
             Castaways <span className="tabular">({contestants.length})</span>
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {contestants.map((contestant) => (
               <div
                 key={contestant.id}

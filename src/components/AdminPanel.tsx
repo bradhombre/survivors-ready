@@ -298,7 +298,7 @@ export function AdminPanel({
         </TabsContent>
 
         <TabsContent value="scoring" className="mt-6">
-          <div className="container max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             {gameType === 'winner_takes_all' ? (
               <div className="relative">
                 <div className="opacity-40 pointer-events-none">
@@ -321,7 +321,7 @@ export function AdminPanel({
         </TabsContent>
 
         <TabsContent value="data" className="mt-6">
-          <div className="container max-w-4xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

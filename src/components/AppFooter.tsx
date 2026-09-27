@@ -32,8 +32,8 @@ export function AppFooter() {
           </p>
         </div>
       </footer>
-      {/* On phones the league page has a fixed bottom tab bar; keep the footer clear of it */}
-      {leagueId && isMobile && <div aria-hidden="true" className="h-[calc(4.5rem+env(safe-area-inset-bottom))]" />}
+      {/* On phones the league page has a fixed bottom tab bar and the chat button above it; keep the footer clear of both */}
+      {leagueId && isMobile && <div aria-hidden="true" className="h-[calc(9rem+env(safe-area-inset-bottom))]" />}
       <BugReportDialog open={bugOpen} onOpenChange={setBugOpen} leagueId={leagueId} />
     </>
   );

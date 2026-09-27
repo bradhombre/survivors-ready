@@ -83,81 +83,83 @@ export function CommissionerChecklist({
   };
 
   return (
-    <Card className="mx-4 mt-4 max-w-7xl lg:mx-auto">
-      <CardHeader className="p-5 pb-3 flex flex-row items-start justify-between gap-3 space-y-0">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <CardTitle>
-            {allDone ? "You're all set!" : "Get your league ready"}
-          </CardTitle>
-          <Badge variant="outline" className="tabular">
-            {completedCount}/4 done
-          </Badge>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleDismiss}
-          className="-mr-2 -mt-2 shrink-0 text-muted-foreground hover:text-foreground"
-          aria-label="Dismiss checklist"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </CardHeader>
-      <CardContent className="p-5 pt-0">
-        {allDone ? (
-          <div className="glass rounded-[12px] flex flex-wrap items-center gap-3 px-4 py-3">
-            <PartyPopper className="h-5 w-5 text-success shrink-0" aria-hidden="true" />
-            <p className="text-sm text-muted-foreground flex-1 min-w-[12rem]">
-              Your league is set up and ready to play. Have fun!
-            </p>
-            <Button variant="outline" onClick={handleDismiss} className="ml-auto shrink-0">
-              Dismiss
-            </Button>
+    <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
+      <Card>
+        <CardHeader className="p-5 pb-3 flex flex-row items-start justify-between gap-3 space-y-0">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <CardTitle>
+              {allDone ? "You're all set!" : "Get your league ready"}
+            </CardTitle>
+            <Badge variant="outline" className="tabular">
+              {completedCount}/4 done
+            </Badge>
           </div>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {STEPS.map((step) => {
-              const done = completionMap[step.id];
-              const Icon = step.icon;
-              return (
-                <button
-                  key={step.id}
-                  onClick={() => onNavigate(step.target)}
-                  className={`flex min-h-[44px] items-center gap-3 rounded-[12px] border-[1.5px] bg-card p-3 text-left transition-colors ${
-                    done
-                      ? "border-border"
-                      : step.id === "scoring"
-                        ? "border-dashed border-input hover:bg-muted"
-                        : "border-border hover:bg-muted hover:border-plank"
-                  }`}
-                >
-                  {done ? (
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success text-success-foreground">
-                      <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
-                    </span>
-                  ) : (
-                    <span className="h-7 w-7 shrink-0 rounded-full border-2 border-input" aria-hidden="true" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Icon className={`h-3.5 w-3.5 ${done ? "text-success" : "text-muted-foreground"}`} aria-hidden="true" />
-                      <span className={`text-sm font-bold ${done ? "line-through text-muted-foreground" : ""}`}>
-                        {step.label}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDismiss}
+            className="-mr-2 -mt-2 shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label="Dismiss checklist"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent className="p-5 pt-0">
+          {allDone ? (
+            <div className="glass rounded-[12px] flex flex-wrap items-center gap-3 px-4 py-3">
+              <PartyPopper className="h-5 w-5 text-success shrink-0" aria-hidden="true" />
+              <p className="text-sm text-muted-foreground flex-1 min-w-[12rem]">
+                Your league is set up and ready to play. Have fun!
+              </p>
+              <Button variant="outline" onClick={handleDismiss} className="ml-auto shrink-0">
+                Dismiss
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {STEPS.map((step) => {
+                const done = completionMap[step.id];
+                const Icon = step.icon;
+                return (
+                  <button
+                    key={step.id}
+                    onClick={() => onNavigate(step.target)}
+                    className={`flex min-h-[44px] items-center gap-3 rounded-[12px] border-[1.5px] bg-card p-3 text-left transition-colors ${
+                      done
+                        ? "border-border"
+                        : step.id === "scoring"
+                          ? "border-dashed border-input hover:bg-muted"
+                          : "border-border hover:bg-muted hover:border-plank"
+                    }`}
+                  >
+                    {done ? (
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success text-success-foreground">
+                        <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
                       </span>
-                      {step.id === "scoring" && !done && (
-                        <Badge variant="outline" className="border-[1.5px] border-input px-2 py-0 text-[11px] text-muted-foreground">Optional</Badge>
-                      )}
+                    ) : (
+                      <span className="h-7 w-7 shrink-0 rounded-full border-2 border-input" aria-hidden="true" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Icon className={`h-3.5 w-3.5 ${done ? "text-success" : "text-muted-foreground"}`} aria-hidden="true" />
+                        <span className={`text-sm font-bold ${done ? "line-through text-muted-foreground" : ""}`}>
+                          {step.label}
+                        </span>
+                        {step.id === "scoring" && !done && (
+                          <Badge variant="outline" className="border-[1.5px] border-input px-2 py-0 text-[11px] text-muted-foreground">Optional</Badge>
+                        )}
+                      </div>
+                      <p className={`text-xs mt-0.5 ${done ? "font-bold text-success" : "text-muted-foreground"}`}>
+                        {done ? "Done" : step.description}
+                      </p>
                     </div>
-                    <p className={`text-xs mt-0.5 ${done ? "font-bold text-success" : "text-muted-foreground"}`}>
-                      {done ? "Done" : step.description}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

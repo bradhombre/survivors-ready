@@ -270,7 +270,7 @@ export const DraftMode = ({
                 })}
               </div>
             )}
-            <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {visibleContestants.map((contestant) => (
                 <li
                   key={contestant.id}
@@ -309,7 +309,7 @@ export const DraftMode = ({
       {/* Teams */}
       <section className="space-y-3">
         <h2 className="font-display text-3xl leading-none">Tribes so far</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {draftOrder.map((player, index) => {
             const playerTeam = getPlayerContestants(player);
             const isCurrentDrafter = player === currentDrafter;

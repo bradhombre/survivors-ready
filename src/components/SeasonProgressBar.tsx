@@ -1,5 +1,5 @@
 import { Contestant } from "@/types/survivor";
-import { Users, Tv, Flame, TreePalm } from "lucide-react";
+import { Users, Tv } from "lucide-react";
 
 interface SeasonProgressBarProps {
   episode: number;
@@ -34,16 +34,7 @@ export function SeasonProgressBar({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Phase chip */}
-          <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-border px-2.5 py-0.5 text-xs font-bold">
-            {isPostMerge ? (
-              <Flame className="h-3.5 w-3.5 text-accent" />
-            ) : (
-              <TreePalm className="h-3.5 w-3.5 text-success" />
-            )}
-            {isPostMerge ? "Post-merge" : "Pre-merge"}
-          </span>
-
+          {/* Phase is shown (and toggled) by the chip in the Game header, so it isn't repeated here */}
           {/* Remaining */}
           {total > 0 && (
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">

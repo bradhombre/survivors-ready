@@ -381,7 +381,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
             <DialogHeader>
               <DialogTitle>League settings</DialogTitle>
               <DialogDescription>
-                Configure your league size and draft settings. You can always change these later in Admin Settings.
+                Configure your league size and draft settings. You can change these later in the Admin tab.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-5 py-2">
@@ -478,7 +478,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
             <DialogHeader>
               <DialogTitle>Bring in the cast</DialogTitle>
               <DialogDescription>
-                Import the official cast for Season {seasonNumber}, or add contestants manually later in Admin Settings.
+                Import the official cast for Season {seasonNumber}, or add castaways yourself later in the Admin tab.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -505,7 +505,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
                     {importingCast ? 'Importing...' : `Import the Season ${seasonNumber} cast`}
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Or skip this step and add contestants manually later.
+                    Or skip this and add castaways yourself later.
                   </p>
                 </div>
               )}

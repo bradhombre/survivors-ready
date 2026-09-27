@@ -351,7 +351,6 @@ export const GameMode = ({
             <h2 className="font-display text-4xl md:text-5xl leading-none text-primary">
               Season {season}
             </h2>
-            <p className="label-caps mt-1.5 text-muted-foreground">Episode {episode}</p>
           </div>
 
           {/* Mobile Layout */}
@@ -662,7 +661,7 @@ export const GameMode = ({
       )}
 
       {/* Leaderboard */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {leaderboard.map((entry, index) => {
           const playerContestants = getPlayerContestants(entry.player);
           const isExpanded = expandedPlayers.has(entry.player);
@@ -913,7 +912,7 @@ export const GameMode = ({
                   </span>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {playerContestants.map((contestant) => {
                     const isExpanded = expandedContestant === contestant.id;
                     const canCry = !cryingThisEpisode.has(contestant.id);
@@ -1063,8 +1062,8 @@ export const GameMode = ({
                               if (!confirm(`Mark ${contestant.name} as voted out?`)) return;
                               handleQuickScore(contestant, SCORING_ACTIONS.VOTED_OUT.label, getPoints("VOTED_OUT", scoringConfig));
                             }}
-                            variant="destructive"
-                            className="h-14 w-full rounded-[12px] text-base font-extrabold"
+                            variant="outline"
+                            className="h-12 w-full rounded-[12px] border-destructive text-base font-extrabold text-destructive hover:bg-destructive hover:text-destructive-foreground"
                           >
                             Voted out
                           </Button>
@@ -1078,7 +1077,7 @@ export const GameMode = ({
             )
           ))
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredContestants.filter(c => c.owner).map((contestant) => {
               const isExpanded = expandedContestant === contestant.id;
               const canCry = !cryingThisEpisode.has(contestant.id);
@@ -1228,8 +1227,8 @@ export const GameMode = ({
                         if (!confirm(`Mark ${contestant.name} as voted out?`)) return;
                         handleQuickScore(contestant, SCORING_ACTIONS.VOTED_OUT.label, getPoints("VOTED_OUT", scoringConfig));
                       }}
-                      variant="destructive"
-                      className="h-14 w-full rounded-[12px] text-base font-extrabold"
+                      variant="outline"
+                      className="h-12 w-full rounded-[12px] border-destructive text-base font-extrabold text-destructive hover:bg-destructive hover:text-destructive-foreground"
                     >
                       Voted out
                     </Button>
@@ -1256,7 +1255,7 @@ export const GameMode = ({
               >
                 <span
                   className={`w-12 shrink-0 text-lg font-black tabular ${
-                    event.points > 0 ? "text-success" : "text-destructive"
+                    event.points > 0 ? "text-success" : event.points < 0 ? "text-destructive" : "text-muted-foreground"
                   }`}
                 >
                   {event.points > 0 ? "+" : ""}

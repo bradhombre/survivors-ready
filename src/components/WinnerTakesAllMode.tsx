@@ -121,7 +121,7 @@ export function WinnerTakesAllMode({
           </Card>
 
           {/* Show all picks */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
             {draftOrder.map((player) => {
               const picks = draftedContestants.filter((c) => c.owner === player);
               if (picks.length === 0) return null;
@@ -184,7 +184,7 @@ export function WinnerTakesAllMode({
         </p>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {draftOrder.map((player) => {
           const picks = draftedContestants.filter((c) => c.owner === player);
           if (picks.length === 0) return null;

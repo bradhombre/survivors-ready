@@ -139,7 +139,7 @@ const Index = () => {
           }}
         />
         <div className="border-t-4 border-accent">
-          <div className="container max-w-5xl mx-auto px-5 py-8 sm:py-10 grid gap-8 md:grid-cols-[1.2fr_1fr] md:items-start">
+          <div className="container max-w-5xl mx-auto px-5 py-8 sm:py-10 grid grid-cols-1 gap-8 md:grid-cols-[1.2fr_1fr] md:items-start">
             <div className="flex flex-col gap-4">
               <p className="label-caps text-accent">A free fantasy league for Survivor fans · Season 51</p>
               <h2 className="font-display text-[44px] sm:text-[54px] leading-[0.92] text-primary">
@@ -185,7 +185,7 @@ const Index = () => {
         <h2 id="how-heading" className="font-display text-4xl sm:text-5xl leading-[0.95] text-primary mt-2">
           Three steps to Tribal
         </h2>
-        <ol className="mt-6 grid gap-4 md:grid-cols-3">
+        <ol className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           {HOW_IT_WORKS.map((step, i) => (
             <li key={step.title} className="plank p-5 flex flex-col gap-2">
               <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-plank bg-warning text-lg font-black text-warning-foreground">
@@ -210,7 +210,7 @@ const Index = () => {
             Big buttons, one-tap scoring, and standings that update for everyone as points come in. Shown with a
             sample league.
           </p>
-          <div className="mt-8 grid gap-8 md:grid-cols-2 justify-items-center">
+          <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 justify-items-center">
             <PhoneFrame caption="The Game tab: live standings">
               <SampleLeaderboard />
             </PhoneFrame>

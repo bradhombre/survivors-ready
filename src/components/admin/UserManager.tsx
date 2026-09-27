@@ -111,7 +111,7 @@ export function UserManager() {
             All accounts
           </CardTitle>
           <CardDescription>
-            Every account on Survivors Ready. Only you can see this page. "Site admin" is an old role from the first version of the app; it no longer grants anything, so remove it from anyone who has it.
+            Every account on Survivors Ready. Only you can see this page. "Site admin" is an old role from the first version of the app. It no longer grants anything; your access comes from being the site owner.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -180,7 +180,7 @@ export function UserManager() {
           <CardDescription>Rarely needed. People can sign up on their own from the sign-in page.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
             <Input placeholder="Email" aria-label="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
             <Input
               type="password"
