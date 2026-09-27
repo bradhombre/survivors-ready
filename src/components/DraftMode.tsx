@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from "react";
+import { Fragment, useMemo, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -148,6 +148,21 @@ export const DraftMode = ({
     return `${nextDrafter} is up next.`;
   })();
 
+  // The next few picks in order, so everyone can see who's coming up
+  const upcoming = Array.from({ length: Math.max(0, Math.min(8, totalPicks - currentDraftIndex)) }, (_, i) => {
+    const index = currentDraftIndex + i;
+    return { index, team: getDrafterAt(index), round: teamCount > 0 ? Math.floor(index / teamCount) + 1 : 1 };
+  });
+
+  // When is my next turn? (only if it isn't right now)
+  const myNextPick = (() => {
+    if (!myTeamName || isMyPick) return null;
+    for (let i = currentDraftIndex + 1; i < totalPicks; i++) {
+      if (getDrafterAt(i) === myTeamName) return { number: i + 1, away: i - currentDraftIndex };
+    }
+    return null;
+  })();
+
   return (
     <div className="container max-w-7xl mx-auto p-4 md:p-8 space-y-6">
       {/* On the clock (hidden until there's a cast to pick from) */}
@@ -161,7 +176,50 @@ export const DraftMode = ({
               {isMyPick ? `Your pick, ${currentDrafter}` : `${currentDrafter} is on the clock`}
             </h1>
             {upNextNote && <p className="mt-2 text-sm font-semibold opacity-90">{upNextNote}</p>}
+            {myNextPick && (
+              <p className="mt-1 text-sm font-semibold opacity-90 tabular">
+                Your next pick is #{myNextPick.number}, {myNextPick.away === 1 ? "right after this one" : `${myNextPick.away} picks away`}.
+              </p>
+            )}
           </div>
+          {upcoming.length > 1 && (
+            <div className="border-b-2 border-border px-5 py-3 sm:px-6">
+              <p className="label-caps text-muted-foreground">Draft order: coming up</p>
+              <ol className="mt-2 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Upcoming picks">
+                {upcoming.map((p, i) => {
+                  const isNow = i === 0;
+                  const isMine = !!myTeamName && p.team === myTeamName;
+                  const newRound = i > 0 && p.round !== upcoming[i - 1].round && gameType !== "winner_takes_all";
+                  return (
+                    <Fragment key={p.index}>
+                      {newRound && (
+                        <li aria-hidden="true" className="label-caps shrink-0 self-center px-1 text-muted-foreground">
+                          Rd {p.round}
+                        </li>
+                      )}
+                      <li
+                        className={`min-w-[96px] shrink-0 rounded-[10px] px-3 py-2 ${
+                          isNow
+                            ? "border-2 border-plank bg-accent text-accent-foreground"
+                            : isMine
+                            ? "border-2 border-accent bg-card"
+                            : "glass"
+                        }`}
+                      >
+                        <span className="block text-[11px] font-bold tabular opacity-80">
+                          {isNow ? "On the clock" : `Pick ${p.index + 1}`}
+                        </span>
+                        <span className="block max-w-[150px] truncate text-sm font-extrabold">
+                          {p.team}
+                          {isMine ? " (you)" : ""}
+                        </span>
+                      </li>
+                    </Fragment>
+                  );
+                })}
+              </ol>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-3 px-5 py-3 sm:px-6">
             <div className="flex-1 min-w-[160px]">
               <Progress value={progress} className="h-2.5" aria-label="Draft progress" />
@@ -328,10 +386,12 @@ export const DraftMode = ({
                   />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display text-2xl leading-[0.95] break-words">{player}</h3>
-                    {isCurrentDrafter && (
+                    {isCurrentDrafter ? (
                       <span className="mt-1 inline-block rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-accent-foreground">
                         On the clock
                       </span>
+                    ) : (
+                      <span className="label-caps mt-1 block text-muted-foreground tabular">Draft slot {index + 1}</span>
                     )}
                   </div>
                   <span className="glass rounded-full px-2.5 py-1 text-sm font-extrabold tabular shrink-0">
