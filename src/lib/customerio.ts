@@ -45,3 +45,10 @@ export function updateLastActive(id: string) {
     last_active_at: Math.floor(Date.now() / 1000),
   });
 }
+
+/** Set profile attributes on the signed-in person (used to target in-app messages). */
+export function setAttributes(id: string, attributes: Record<string, unknown>) {
+  const cio = getCio();
+  if (!cio) return;
+  cio.identify({ id, ...attributes });
+}

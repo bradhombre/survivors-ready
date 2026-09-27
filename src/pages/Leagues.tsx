@@ -29,6 +29,8 @@ import { JoinLeagueDialog } from '@/components/JoinLeagueDialog';
 
 import { toast } from 'sonner';
 import { Lockup } from "@/components/Lockup";
+import { useAppSettings } from '@/hooks/useAppSettings';
+import { setAttributes } from '@/lib/customerio';
 
 interface LeagueMembership {
   id: string;
@@ -44,6 +46,8 @@ interface LeagueMembership {
 export default function Leagues() {
   const [memberships, setMemberships] = useState<LeagueMembership[]>([]);
   const [gameTypes, setGameTypes] = useState<Record<string, string>>({});
+  const [leagueSeasons, setLeagueSeasons] = useState<Record<string, number>>({});
+  const { settings: appSettings, loading: settingsLoading } = useAppSettings();
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
@@ -100,23 +104,49 @@ export default function Leagues() {
       if (leagueIds.length > 0) {
         const { data: sessions } = await supabase
           .from('game_sessions')
-          .select('league_id, game_type')
+          .select('league_id, game_type, season')
           .in('league_id', leagueIds)
           .order('created_at', { ascending: false });
         
         if (sessions) {
           const typeMap: Record<string, string> = {};
+          const seasonMap: Record<string, number> = {};
           sessions.forEach((s: any) => {
             if (s.league_id && !typeMap[s.league_id]) {
               typeMap[s.league_id] = s.game_type || 'full';
+              if (typeof s.season === 'number') seasonMap[s.league_id] = s.season;
             }
           });
           setGameTypes(typeMap);
+          setLeagueSeasons(seasonMap);
         }
       }
     }
     setLoading(false);
   };
+
+  // Tell Customer.io where this person's leagues stand, so in-app messages can
+  // target commissioners whose league is still on last season (and nobody else).
+  useEffect(() => {
+    if (!user || loading || settingsLoading) return;
+    const current = parseInt((appSettings.current_season || '').match(/\d{1,4}/)?.[0] || '', 10);
+    if (!current) return;
+    const withSeason = memberships.filter((m) => m.leagues && leagueSeasons[m.leagues.id] != null);
+    const isCommissioner = (m: LeagueMembership) =>
+      m.role === 'league_admin' || m.leagues?.owner_id === user.id;
+    const oldCommissioner = withSeason
+      .filter((m) => isCommissioner(m) && leagueSeasons[m.leagues!.id] < current)
+      .sort((a, b) => leagueSeasons[b.leagues!.id] - leagueSeasons[a.leagues!.id]);
+    const onCurrent = withSeason.some((m) => leagueSeasons[m.leagues!.id] >= current);
+    setAttributes(user.id, {
+      current_season: current,
+      league_count: withSeason.length,
+      has_current_season_league: onCurrent,
+      needs_new_season: oldCommissioner.length > 0 && !onCurrent,
+      old_season_league_id: oldCommissioner[0]?.leagues?.id ?? '',
+      old_season_number: oldCommissioner[0] ? leagueSeasons[oldCommissioner[0].leagues!.id] : '',
+    });
+  }, [user, loading, settingsLoading, appSettings, memberships, leagueSeasons]);
 
   const handleSignOut = async () => {
     await signOut();
