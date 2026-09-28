@@ -20,6 +20,15 @@ import {
 } from "@/lib/episodeResults";
 import { useLeagueEpisodeResults } from "@/hooks/useEpisodeResults";
 
+/** "Aubry ×2, Joe ×2" (the finale gives finalists two survival rounds) */
+const namesWithCounts = (names: string[]) =>
+  [...new Set(names)]
+    .map((n) => {
+      const k = names.filter((x) => x === n).length;
+      return k > 1 ? `${n} ×${k}` : n;
+    })
+    .join(", ");
+
 type PlannedInput = { contestantId: string; contestantName: string; action: string; points: number };
 
 interface EpisodeResultsCardProps {
@@ -297,7 +306,7 @@ export function EpisodeResultsCard({
                         {g.label}
                         {g.events.length > 1 && <span className="font-semibold text-muted-foreground tabular"> · {g.events.length}</span>}
                       </p>
-                      <p className="text-sm text-muted-foreground">{g.events.map((e) => e.contestantName).join(", ")}</p>
+                      <p className="text-sm text-muted-foreground">{namesWithCounts(g.events.map((e) => e.contestantName))}</p>
                     </div>
                     <span
                       className={`shrink-0 text-sm font-extrabold tabular ${

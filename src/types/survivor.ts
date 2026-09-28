@@ -70,7 +70,7 @@ export const SCORING_ACTIONS = {
   EPISODE_TITLE: { label: "Episode Title 📺", points: 5, emoji: "📺", description: "Awarded when a contestant says the episode title during the episode." },
   TRIBAL_VOTE_CORRECT: { label: "Tribal Vote Correct ✅", points: 5, emoji: "✅", description: "Awarded when a contestant votes for the person who gets eliminated at tribal council." },
   SURVIVE_PRE: { label: "Survive Round (Pre-Merge) 🌴", points: 5, emoji: "🌴", description: "Awarded each episode a contestant survives before the merge." },
-  SURVIVE_POST: { label: "Survive Round (Post-Merge) 🔥", points: 10, emoji: "🔥", description: "Awarded each episode a contestant survives after the merge." },
+  SURVIVE_POST: { label: "Survive Round (Post-Merge) 🔥", points: 10, emoji: "🔥", description: "Awarded each episode a contestant survives after the merge. The finale counts twice for the finalists." },
   MAKE_JURY: { label: "Make Jury ⚖️", points: 50, emoji: "⚖️", description: "One-time bonus when a contestant becomes a member of the jury." },
   MAKE_FINAL: { label: "Make Final Tribal 🎭", points: 75, emoji: "🎭", description: "One-time bonus when a contestant makes it to Final Tribal Council." },
   WIN_SURVIVOR: { label: "Win Survivor 👑", points: 100, emoji: "👑", description: "Ultimate bonus when a contestant wins the season." },

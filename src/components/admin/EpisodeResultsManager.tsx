@@ -562,7 +562,15 @@ export function EpisodeResultsManager() {
                 </Button>
               ) : (
                 <div className="space-y-4 rounded-[12px] border-2 border-border p-4">
-                  <CastPicker id="er-ftc" label="Made Final Tribal" cast={cast} value={form.final_tribal} onChange={(v) => set({ final_tribal: v })} outBefore={outBefore} />
+                  <CastPicker
+                    id="er-ftc"
+                    label="Made Final Tribal"
+                    hint="Final two or three. They get two survival rounds for the finale, since it's two episodes in one."
+                    cast={cast}
+                    value={form.final_tribal}
+                    onChange={(v) => set({ final_tribal: v })}
+                    outBefore={outBefore}
+                  />
                   <div className="space-y-1.5">
                     <Label htmlFor="er-winner" className="label-caps text-muted-foreground">Sole Survivor</Label>
                     <select

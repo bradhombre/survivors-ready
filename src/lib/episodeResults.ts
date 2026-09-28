@@ -175,16 +175,25 @@ export function buildEpisodePlan(args: {
   const owned = contestants.filter((c) => !!c.owner);
   const stillInAfter = (c: Contestant) => !c.isEliminated && !leftBefore.has(c.id) && !leftThisEpisode.has(c.id);
 
-  // Survived the episode. Skipped if this episode is already scored by hand, if the league has
-  // survival for a later episode (its numbering runs ahead), or if the castaway already has
-  // survival points for this many episodes (numbering runs behind).
+  // Survived the episode. The finale is really two episodes, so the finalists (final two or
+  // three) get two survival rounds for it. Rounds are skipped when already entered by hand for
+  // this episode, when the league has survival for a later episode (its numbering runs ahead), or
+  // when the castaway already has survival points for this many episodes (numbering runs behind).
+  const isFinale = result.final_tribal.length > 0 || !!result.winner;
+  const rounds = isFinale ? 2 : 1;
+  const finalistIds = new Set(finalTribal.map((c) => c.id));
   const surviveKey = result.post_merge ? "SURVIVE_POST" : "SURVIVE_PRE";
   if (isActionEnabled(surviveKey, scoringConfig)) {
     for (const c of owned) {
       if (!stillInAfter(c)) continue;
+      if (isFinale && finalistIds.size > 0 && !finalistIds.has(c.id)) continue;
       const surv = eventsFor(c).filter(isSurvive);
-      if (surv.some((e) => e.episode >= episode) || surv.length >= episode - skippedBefore) alreadyEntered++;
-      else add(c, surviveKey);
+      const thisEpisode = surv.filter((e) => e.episode === episode).length;
+      const ahead = surv.some((e) => e.episode > episode);
+      const target = episode - skippedBefore + (rounds - 1); // survival rounds owed through this episode
+      const needed = ahead ? 0 : Math.max(0, Math.min(rounds - thisEpisode, target - surv.length));
+      alreadyEntered += rounds - needed;
+      for (let i = 0; i < needed; i++) add(c, surviveKey);
     }
   }
 
