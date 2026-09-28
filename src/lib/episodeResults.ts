@@ -275,3 +275,20 @@ export function nextPendingEpisode(published: EpisodeResult[], handled: Set<numb
   }
   return { next: first, blocked: false, waiting: pending.length };
 }
+
+/**
+ * Should the card ask "did your league start before this episode?" Yes while the league has
+ * scored nothing (by hand or automatically). After "we started after episode 1", the next
+ * episode is only asked about if it was already out when they said so (they joined even later).
+ */
+export function askIfEpisodeCounts(args: {
+  scoringEventCount: number;
+  applications: { skipped: boolean; applied_at: string }[];
+  publishedAt?: string | null;
+}) {
+  const { scoringEventCount, applications, publishedAt } = args;
+  if (scoringEventCount > 0 || applications.some((a) => !a.skipped)) return false;
+  const lastSkipAt = Math.max(0, ...applications.filter((a) => a.skipped).map((a) => Date.parse(a.applied_at) || 0));
+  const published = Date.parse(publishedAt || "") || 0;
+  return lastSkipAt === 0 || published === 0 || published <= lastSkipAt;
+}

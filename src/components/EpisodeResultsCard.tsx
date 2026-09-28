@@ -13,6 +13,7 @@ import { AlertTriangle, Sparkles, Undo2 } from "lucide-react";
 import type { Contestant, ScoringEvent } from "@/types/survivor";
 import type { ScoringConfig } from "@/lib/scoring";
 import {
+  askIfEpisodeCounts,
   buildEpisodePlan,
   nextPendingEpisode,
   pointsByTeam,
@@ -93,23 +94,36 @@ export function EpisodeResultsCard({
     [next, results, contestants, scoringEvents, scoringConfig, overrides, skipped]
   );
 
-  // Most recent auto-scored episode, for the undo line (within 2 days)
+  // Most recent episode handled here (scored, or "we started after it"), for the undo line (2 days)
   const lastApplied = useMemo(() => {
     const recent = [...applications.values()]
-      .filter((a) => !a.skipped && a.events_added > 0 && Date.now() - Date.parse(a.applied_at) < 2 * 864e5)
+      .filter((a) => (a.skipped || a.events_added > 0) && Date.now() - Date.parse(a.applied_at) < 2 * 864e5)
       .sort((a, b) => b.episode - a.episode);
     return recent[0];
   }, [applications]);
 
+  // A league that hasn't scored anything yet gets asked whether this episode counts. Lots of
+  // leagues draft after the premiere; some want those points, some don't. After "we started
+  // after episode 1", episode 2 is only asked about if it was already out when they said so.
+  const firstEpisodeForLeague = askIfEpisodeCounts({
+    scoringEventCount: scoringEvents.length,
+    applications: [...applications.values()],
+    publishedAt: results.find((r) => r.episode === next)?.published_at,
+  });
+
   if (!ok) return null;
 
   const undo = async (episode: number) => {
-    if (!window.confirm(`Undo episode ${episode} auto-scoring? The points it added are removed and castaways it marked out come back.`)) return;
+    const wasSkipped = applications.get(episode)?.skipped;
+    const question = wasSkipped
+      ? `Undo "we started after episode ${episode}"? It comes back so you can count it instead.`
+      : `Undo episode ${episode} auto-scoring? The points it added are removed and castaways it marked out come back.`;
+    if (!window.confirm(question)) return;
     setBusy(true);
     try {
       const n = await onUndo(episode);
       await refresh();
-      toast.success(`Episode ${episode} auto-scoring undone (${n} events removed)`);
+      toast.success(wasSkipped ? `Episode ${episode} is back on the card` : `Episode ${episode} auto-scoring undone (${n} events removed)`);
     } catch (err: any) {
       toast.error(`Couldn't undo: ${err?.message || "try again"}`);
     } finally {
@@ -120,7 +134,9 @@ export function EpisodeResultsCard({
   const undoLine = lastApplied && !open && (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 sm:px-6 text-sm text-muted-foreground border-t-2 border-border">
       <span className="tabular">
-        Episode {lastApplied.episode} was auto-scored ({lastApplied.events_added} events).
+        {lastApplied.skipped
+          ? `Episode ${lastApplied.episode}: no points (your league started after it).`
+          : `Episode ${lastApplied.episode} was auto-scored (${lastApplied.events_added} events).`}
       </span>
       <button
         type="button"
@@ -190,11 +206,16 @@ export function EpisodeResultsCard({
 
   // For leagues that started after this episode aired: record who left, give no points
   const skip = async () => {
+    // A castaway we couldn't match has to be picked first, or they'd stay "still in"
+    if (needsPicks.length > 0) {
+      setOpen(true);
+      return;
+    }
     const out = plan.eliminate.length;
     const msg =
       `No points for episode ${plan.episode}. ` +
-      (out > 0 ? `${out === 1 ? "The castaway who left is" : `The ${out} castaways who left are`} still marked out. ` : "") +
-      "This card won't come back for it.";
+      (out > 0 ? `${out === 1 ? "The castaway who went home is" : `The ${out} castaways who went home are`} marked out. ` : "") +
+      "You can undo this for 2 days.";
     if (!window.confirm(msg)) return;
     setBusy(true);
     try {
@@ -224,13 +245,20 @@ export function EpisodeResultsCard({
           </p>
           <h2 className="font-display text-3xl leading-none mt-1">Episode {plan.episode} results are in</h2>
           <p className="mt-2 text-sm text-header-label max-w-[60ch]">
-            Voted out, survival points and immunity, ready to add in one tap. Review first; the details are spoilers.
+            {firstEpisodeForLeague
+              ? `Did your league start before episode ${plan.episode} aired? Count it and your teams get its points. Started after? Just mark who went home, no points.`
+              : "Voted out, survival points and immunity, ready to add in one tap. Review first; the details are spoilers."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 px-5 py-3 sm:px-6">
           <Button variant="accent" className="h-11" onClick={() => setOpen(true)}>
-            Review and apply
+            {firstEpisodeForLeague ? `Count episode ${plan.episode}` : "Review and apply"}
           </Button>
+          {firstEpisodeForLeague && (
+            <Button variant="outline" className="h-11" onClick={skip} disabled={busy}>
+              We started after episode {plan.episode}
+            </Button>
+          )}
           {waiting > 1 && (
             <span className="text-sm font-semibold text-muted-foreground tabular">
               {waiting - 1} more episode{waiting > 2 ? "s" : ""} waiting after this one
@@ -350,7 +378,7 @@ export function EpisodeResultsCard({
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="ghost" className="h-11" onClick={skip} disabled={busy}>
+            <Button variant="ghost" className="h-11" onClick={skip} disabled={busy || needsPicks.length > 0}>
               We started after this episode
             </Button>
             <Button variant="accent" className="h-11" onClick={apply} disabled={busy || needsPicks.length > 0}>
