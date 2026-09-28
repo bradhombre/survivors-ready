@@ -126,8 +126,11 @@ export function validateSource(source: SourceName, raw: RawEpisode[], castNames:
   const problems = new Map<number, string>();
   const sorted = [...raw].filter((r) => Number.isInteger(r?.episode) && r.episode >= 1).sort((a, b) => a.episode - b.episode);
   const gone = new Set<string>();
+  // Nothing counts after the finale (the Survivor Wiki lists the reunion/aftershow as the next episode)
+  const finale = sorted.find((r) => typeof r.winner === "string" && r.winner.trim());
 
   for (const r of sorted) {
+    if (finale && r.episode > finale.episode) break;
     const bad: string[] = [];
     const fix = (list: string[] | undefined) =>
       (list || [])
@@ -155,7 +158,10 @@ export function validateSource(source: SourceName, raw: RawEpisode[], castNames:
     for (const n of exits) if (gone.has(n)) bad.push(`${n} already left in an earlier episode`);
     for (const n of [...f.immunity, ...f.final_tribal, ...(f.winner ? [f.winner] : [])])
       if (gone.has(n)) bad.push(`${n} already left, so can't win immunity or reach the end`);
-    for (const n of f.immunity) if (f.voted_out.includes(n)) bad.push(`${n} can't win immunity and be voted out`);
+    // With one Tribal Council, the immunity winner can't go home. Finales and double episodes have
+    // several, so someone can win the first immunity and be voted out at the next one.
+    if (exits.length <= 1)
+      for (const n of f.immunity) if (f.voted_out.includes(n)) bad.push(`${n} can't win immunity and be voted out`);
     if (exits.length > 4) bad.push("more than 4 people left in one episode");
     if (!f.air_date) bad.push("no air date");
 
@@ -240,6 +246,7 @@ export function decide(args: {
       if (Math.min(wikiAge, wpAge) >= cfg.agreeStableHours) {
         out.push({ episode: ep, action: "publish", facts, note: "Survivor Wiki and Wikipedia agree." });
         merged = facts.post_merge;
+        if (facts.winner) break; // the finale is the last episode
         continue;
       }
       out.push({ episode: ep, action: "wait", reason: `Both wikis agree; waiting until they've been steady for ${cfg.agreeStableHours} hours.` });
@@ -252,6 +259,7 @@ export function decide(args: {
     if (wikiAge >= cfg.wikiAloneStableHours) {
       out.push({ episode: ep, action: "publish", facts, note: `Survivor Wiki, steady for ${cfg.wikiAloneStableHours}+ hours; Wikipedia not updated yet.` });
       merged = facts.post_merge;
+      if (facts.winner) break;
       continue;
     }
     out.push({ episode: ep, action: "wait", reason: `Survivor Wiki has it; waiting until it's been steady for ${cfg.wikiAloneStableHours} hours (Wikipedia isn't updated yet).` });

@@ -206,6 +206,12 @@ BEGIN
   UPDATE public.contestants SET is_eliminated = false
    WHERE session_id = _session_id AND id = ANY(_app.eliminated_ids);
 
+  -- Undoing the finale reopens the season (only if no Sole Survivor is left on the board)
+  UPDATE public.game_sessions SET status = 'active'
+   WHERE id = _session_id AND status = 'completed'
+     AND NOT EXISTS (SELECT 1 FROM public.scoring_events
+                      WHERE session_id = _session_id AND action ILIKE '%Win Survivor%');
+
   DELETE FROM public.episode_result_applications WHERE session_id = _session_id AND episode = _episode;
   RETURN _n;
 END;

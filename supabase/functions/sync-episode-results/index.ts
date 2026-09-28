@@ -5,7 +5,7 @@
 // been steady (see logic.ts). Commissioners still choose when to apply it to their league,
 // which is the spoiler gate for leagues that watch later.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import {
   CONFIG,
   decide,
@@ -76,10 +76,11 @@ Rules:
 - Include an episode only if it has aired AND its eliminations are filled in. Skip rows that are blank or say TBD.
 - voted_out: castaways eliminated at Tribal Council that episode (by votes, rocks, or losing fire-making).
 - quit: castaways who chose to leave. medevac: castaways medically evacuated or removed by production.
-- individual_immunity: castaways who individually won immunity that episode. If a TRIBE won immunity, leave it empty. Never put tribe names here.
+- individual_immunity: castaways who individually won immunity that episode, listed once per immunity challenge won. A finale or double episode can have several; if the same castaway won two, list them twice. If a TRIBE won immunity, leave it out. Never put tribe names here. A name in [brackets] next to the winner is someone they chose to share a reward or took to the end, not an immunity winner.
 - merged: true if the tribes had merged by this episode (one merged tribe).
 - first_juror_voted_out: true only if a castaway eliminated in this episode became the FIRST member of the jury.
-- final_tribal and winner: only for the finale episode.
+- The finale often covers several Tribal Councils in one episode: list everyone eliminated in it (including the fire-making loser) in voted_out, every individual immunity winner, the finalists in final_tribal and the Sole Survivor in winner.
+- final_tribal and winner: only for the finale episode. Ignore any reunion or aftershow listed after it.
 - A two-hour episode shown as one row in the table is one episode.
 - If anything is unclear or the tables contradict each other, add a short note to "uncertain" for that episode instead of guessing.`;
 
@@ -101,7 +102,7 @@ Rules:
 }
 
 async function notifyOwner(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   data: { season: number; episode: number; status: string; message: string }
 ) {
   const apiKey = Deno.env.get("CIO_TRACK_API_KEY");
@@ -120,6 +121,62 @@ async function notifyOwner(
     headers: { Authorization: `Basic ${creds}`, "Content-Type": "application/json" },
     body: JSON.stringify({ name: "episode_results_update", data: { ...data, admin_url: "https://survivorsready.com/admin" } }),
   }).catch(() => {});
+}
+
+/**
+ * Test on a past season (site owner only). Reads both wikis for that season and replays it in
+ * order, as if each episode had just aired and both pages had been steady for hours, so you can
+ * see exactly what would be published. Writes nothing to the database.
+ */
+async function testSeason(supabase: SupabaseClient, season: number) {
+  if (!Number.isInteger(season) || season < 1) return { ok: false, error: "Pick a season number" };
+  const { data: castRows } = await supabase.from("master_contestants").select("name").eq("season_number", season);
+  const castNames = (castRows || []).map((r: { name: string }) => r.name);
+  if (castNames.length === 0) return { ok: false, error: `No official cast for Season ${season}. Add it in the Cast tab first.` };
+
+  const sources: SourceName[] = ["survivor_wiki", "wikipedia"];
+  const facts: Record<SourceName, SourceFacts | null> = { survivor_wiki: null, wikipedia: null };
+  const notes: Record<string, string> = {};
+  for (const source of sources) {
+    try {
+      const text = htmlTablesToText(await fetchPageHtml(source, season)).slice(0, 30000);
+      const raw = await extractWithAI(source, season, castNames, text);
+      facts[source] = validateSource(source, raw, castNames);
+      notes[source] = `read ${raw.length} episodes`;
+    } catch (e) {
+      notes[source] = `error: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  }
+  const wiki = facts.survivor_wiki;
+  if (!wiki) return { ok: false, season, notes };
+
+  const eps = [
+    ...new Set(
+      sources.flatMap((s) => (facts[s] ? [...facts[s]!.episodes.keys(), ...facts[s]!.problems.keys()] : []))
+    ),
+  ].sort((a, b) => a - b);
+  const longAgo = "2000-01-01T00:00:00Z";
+  const candidates = new Map<string, Candidate>();
+  for (const s of sources) for (const ep of eps) candidates.set(`${s}:${ep}`, { hash: "", first_seen_at: longAgo });
+  const now = new Date("2100-01-01T00:00:00Z");
+
+  let merged = false;
+  const episodes = [];
+  for (const ep of eps) {
+    const published = new Set(Array.from({ length: ep - 1 }, (_, i) => i + 1));
+    const [d] = decide({ wiki, wikipedia: facts.wikipedia, candidates, published, manual: new Set(), lastPublishedPostMerge: merged, now });
+    const w = wiki.episodes.get(ep) || null;
+    const wp = facts.wikipedia?.episodes.get(ep) || null;
+    episodes.push({
+      episode: ep,
+      result: d?.action ?? "skipped",
+      why: !d ? "Not listed by the Survivor Wiki" : d.action === "publish" ? d.note : d.reason,
+      facts: d?.action === "publish" ? d.facts : w,
+      wikipedia_says: wp && w && factsKey(wp) !== factsKey(w) ? wp : undefined,
+    });
+    merged = d?.action === "publish" ? d.facts.post_merge : merged || !!w?.post_merge;
+  }
+  return { ok: true, season, notes, episodes };
 }
 
 Deno.serve(async (req) => {
@@ -141,13 +198,18 @@ Deno.serve(async (req) => {
         isOwner = !!sa;
       }
     }
-    let body: { force?: boolean } = {};
+    let body: { force?: boolean; test_season?: number } = {};
     try {
       body = await req.json();
     } catch (_e) {
       body = {};
     }
     const force = !!body.force && isOwner;
+
+    if (body.test_season !== undefined) {
+      if (!isOwner) return json({ error: "Site owner only" }, 403);
+      return json(await testSeason(supabase, Number(body.test_season)));
+    }
 
     // Throttle so nobody can run up the AI and scraping bill
     const { data: lastRun } = await supabase

@@ -40,7 +40,19 @@ const comparable = (r: EpisodeResult) =>
     r.winner || null,
   ]);
 
-/** A row of castaway pills; tapping toggles a name in `value`. */
+/** "Savannah ×2, Sophi" */
+const namesWithCounts = (names: string[]) =>
+  [...new Set(names)]
+    .map((n) => {
+      const k = names.filter((x) => x === n).length;
+      return k > 1 ? `${n} ×${k}` : n;
+    })
+    .join(", ");
+
+/**
+ * A row of castaway pills; tapping toggles a name in `value`. With `allowTwice`, a second tap
+ * counts a second win (a finale can have two immunity challenges) and a third tap clears it.
+ */
 function CastPicker({
   id,
   label,
@@ -49,6 +61,7 @@ function CastPicker({
   value,
   onChange,
   outBefore,
+  allowTwice = false,
 }: {
   id: string;
   label: string;
@@ -57,9 +70,15 @@ function CastPicker({
   value: string[];
   onChange: (next: string[]) => void;
   outBefore: Map<string, number>;
+  allowTwice?: boolean;
 }) {
-  const toggle = (name: string) =>
-    onChange(value.includes(name) ? value.filter((n) => n !== name) : [...value, name]);
+  const count = (name: string) => value.filter((n) => n === name).length;
+  const toggle = (name: string) => {
+    const n = count(name);
+    if (n === 0) onChange([...value, name]);
+    else if (allowTwice && n === 1) onChange([...value, name]);
+    else onChange(value.filter((x) => x !== name));
+  };
   return (
     <fieldset className="space-y-2" aria-labelledby={`${id}-label`}>
       <div>
@@ -72,6 +91,7 @@ function CastPicker({
       <div className="flex flex-wrap gap-2">
         {cast.map((c) => {
           const on = value.includes(c.name);
+          const times = count(c.name);
           const outEp = outBefore.get(c.name);
           return (
             <button
@@ -89,6 +109,7 @@ function CastPicker({
               title={outEp ? `Out in episode ${outEp}` : undefined}
             >
               {c.name}
+              {times > 1 && <span className="tabular"> ×{times}</span>}
             </button>
           );
         })}
@@ -99,8 +120,117 @@ function CastPicker({
 
 type SyncRun = { id: number; ran_at: string; ok: boolean; summary: string | null };
 
+type TestFacts = {
+  voted_out: string[];
+  quit: string[];
+  left_game: string[];
+  immunity: string[];
+  post_merge: boolean;
+  jury_starts: boolean;
+  final_tribal: string[];
+  winner: string | null;
+};
+type TestRow = { episode: number; result: "publish" | "wait" | "review" | "skipped"; why: string; facts: TestFacts | null; wikipedia_says?: TestFacts };
+type TestResult = { ok: boolean; error?: string; season?: number; notes?: Record<string, string>; episodes?: TestRow[] };
+
+const factsLine = (f: TestFacts) =>
+  [
+    f.voted_out.length && `Out: ${f.voted_out.join(", ")}`,
+    f.quit.length && `Quit: ${f.quit.join(", ")}`,
+    f.left_game.length && `Medevac: ${f.left_game.join(", ")}`,
+    f.immunity.length && `Immunity: ${namesWithCounts(f.immunity)}`,
+    f.post_merge && "Merged",
+    f.jury_starts && "First juror",
+    f.final_tribal.length && `Final Tribal: ${f.final_tribal.join(", ")}`,
+    f.winner && `Winner: ${f.winner}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+/** Replays a finished season through the wiki reader. Writes nothing. */
+function PastSeasonTest({ defaultSeason }: { defaultSeason?: number }) {
+  const [text, setText] = useState(defaultSeason ? String(defaultSeason) : "");
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<TestResult | null>(null);
+  useEffect(() => {
+    if (!text && defaultSeason) setText(String(defaultSeason));
+  }, [defaultSeason, text]);
+  const run = async () => {
+    const n = parseInt(text, 10);
+    if (!n) return toast.error("Type a season number");
+    setRunning(true);
+    setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-episode-results", { body: { test_season: n } });
+      if (error) throw error;
+      setResult(data as TestResult);
+    } catch (err: any) {
+      setResult({ ok: false, error: err?.message || "Couldn't run the test" });
+    } finally {
+      setRunning(false);
+    }
+  };
+  const chip = {
+    publish: "bg-success text-success-foreground",
+    wait: "bg-muted text-foreground",
+    review: "bg-warning text-warning-foreground",
+    skipped: "bg-muted text-muted-foreground",
+  } as const;
+  const word = { publish: "Would publish", wait: "Would wait", review: "Needs you", skipped: "Not listed" } as const;
+  return (
+    <div className="border-t-2 border-border pt-4 space-y-3">
+      <div>
+        <p className="font-bold text-sm">Test on a past season</p>
+        <p className="text-xs text-muted-foreground">
+          Reads both wikis for a finished season and shows what would have been published, episode by episode, finale
+          included. Changes nothing. Takes about a minute. The season needs an official cast in the Cast tab.
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Input
+          aria-label="Season to test"
+          inputMode="numeric"
+          className="h-11 w-24"
+          value={text}
+          onChange={(e) => setText(e.target.value.replace(/\D/g, ""))}
+        />
+        <Button variant="outline" className="h-11" onClick={run} disabled={running}>
+          {running ? "Reading the wikis…" : "Run test"}
+        </Button>
+      </div>
+      {result && !result.ok && (
+        <p className="text-sm text-destructive font-semibold">
+          {result.error || "The test didn't finish."}
+          {result.notes ? ` (${Object.entries(result.notes).map(([k, v]) => `${k}: ${v}`).join("; ")})` : ""}
+        </p>
+      )}
+      {result?.ok && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Season {result.season}.{" "}
+            {result.notes && Object.entries(result.notes).map(([k, v]) => `${k === "wikipedia" ? "Wikipedia" : "Survivor Wiki"}: ${v}`).join(" · ")}
+          </p>
+          <ul className="divide-y divide-border">
+            {(result.episodes || []).map((r) => (
+              <li key={r.episode} className="py-2 text-sm space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold tabular">Episode {r.episode}</span>
+                  <span className={`label-caps rounded-full px-2 py-0.5 ${chip[r.result]}`}>{word[r.result]}</span>
+                </div>
+                {r.facts && <p>{factsLine(r.facts) || "Nothing recorded"}</p>}
+                {r.result !== "publish" && <p className="text-muted-foreground">{r.why}</p>}
+                {r.wikipedia_says && <p className="text-muted-foreground">Wikipedia says: {factsLine(r.wikipedia_says)}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** The hourly wiki job: recent runs and a "check now" button. */
-function AutoResultsPanel({ onChecked }: { onChecked: () => void }) {
+function AutoResultsPanel({ onChecked, testSeason }: { onChecked: () => void; testSeason?: number }) {
   const [runs, setRuns] = useState<SyncRun[]>([]);
   const [checking, setChecking] = useState(false);
   const load = async () => {
@@ -160,6 +290,7 @@ function AutoResultsPanel({ onChecked }: { onChecked: () => void }) {
             ))}
           </ul>
         )}
+        <PastSeasonTest defaultSeason={testSeason} />
       </CardContent>
     </Card>
   );
@@ -266,7 +397,9 @@ export function EpisodeResultsManager() {
 
   const exits = [...form.voted_out, ...form.quit, ...(form.left_game || [])];
   const warnings: string[] = [];
-  const both = form.voted_out.filter((n) => form.immunity.includes(n));
+  // Only impossible with a single Tribal Council. In a finale or double episode someone can win the
+  // first immunity and be voted out at the next Tribal.
+  const both = exits.length <= 1 ? form.voted_out.filter((n) => form.immunity.includes(n)) : [];
   if (both.length) warnings.push(`${both.join(", ")} can't be voted out and win immunity in the same episode.`);
   const twice = exits.filter((n, i) => exits.indexOf(n) !== i);
   if (twice.length) warnings.push(`${[...new Set(twice)].join(", ")} is in more than one "left" list.`);
@@ -308,7 +441,7 @@ export function EpisodeResultsManager() {
 
   return (
     <div className="space-y-6">
-      <AutoResultsPanel onChecked={refresh} />
+      <AutoResultsPanel onChecked={refresh} testSeason={currentSeason ? currentSeason - 1 : undefined} />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -398,11 +531,12 @@ export function EpisodeResultsManager() {
               <CastPicker
                 id="er-imm"
                 label="Won individual immunity"
-                hint="Individual immunity only. Tribe immunity isn't a scoring event."
+                hint="Individual immunity only. Tribe immunity isn't a scoring event. Won two this episode (finale)? Tap them again for ×2."
                 cast={cast}
                 value={form.immunity}
                 onChange={(v) => set({ immunity: v })}
                 outBefore={outBefore}
+                allowTwice
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -520,7 +654,7 @@ export function EpisodeResultsManager() {
                     <span className="text-sm text-muted-foreground">
                       {" "}
                       · Out: {[...r.voted_out, ...r.quit, ...(r.left_game || [])].join(", ") || "nobody"}
-                      {r.immunity.length ? ` · Immunity: ${r.immunity.join(", ")}` : ""}
+                      {r.immunity.length ? ` · Immunity: ${namesWithCounts(r.immunity)}` : ""}
                       {r.post_merge ? " · post-merge" : ""}
                       {r.source === "auto" ? ` · automatic${r.auto_note ? ` (${r.auto_note})` : ""}` : ""}
                     </span>

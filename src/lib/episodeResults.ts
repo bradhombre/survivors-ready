@@ -188,12 +188,19 @@ export function buildEpisodePlan(args: {
     }
   }
 
-  // Individual immunity
+  // Individual immunity: once per challenge won (a finale can have two for the same castaway).
+  // Wins already entered by hand for this episode are subtracted.
   if (isActionEnabled("WIN_IMMUNITY", scoringConfig)) {
+    const entered = new Map<string, number>();
     for (const c of immunity) {
       if (!c.owner) continue;
-      if (has(c, "WIN_IMMUNITY", episode)) alreadyEntered++;
-      else add(c, "WIN_IMMUNITY");
+      if (!entered.has(c.id))
+        entered.set(c.id, eventsFor(c).filter((e) => e.episode === episode && isAction(e, "WIN_IMMUNITY")).length);
+      const left = entered.get(c.id)!;
+      if (left > 0) {
+        entered.set(c.id, left - 1);
+        alreadyEntered++;
+      } else add(c, "WIN_IMMUNITY");
     }
   }
 
