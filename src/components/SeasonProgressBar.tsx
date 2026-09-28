@@ -14,10 +14,12 @@ interface SeasonProgressBarProps {
  */
 export function SeasonProgressBar({
   episode,
-  totalEpisodes = 13,
+  totalEpisodes: plannedEpisodes = 13,
   isPostMerge,
   contestants,
 }: SeasonProgressBarProps) {
+  // Most seasons are 13 episodes; longer ones grow the bar instead of overflowing it
+  const totalEpisodes = Math.max(plannedEpisodes, episode);
   const remaining = contestants.filter((c) => !c.isEliminated).length;
   const total = contestants.length;
 

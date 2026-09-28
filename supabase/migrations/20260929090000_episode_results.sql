@@ -40,7 +40,7 @@ CREATE POLICY "Site owner manages episode results"
 
 GRANT SELECT, INSERT, UPDATE ON public.episode_results TO authenticated;
 
--- 2) Which leagues applied (or skipped) which episode, and exactly what was added (for undo)
+-- 2) Which leagues applied (or took no points for) which episode, and exactly what was added (for undo)
 CREATE TABLE IF NOT EXISTS public.episode_result_applications (
   session_id uuid NOT NULL REFERENCES public.game_sessions(id) ON DELETE CASCADE,
   episode integer NOT NULL,
@@ -130,6 +130,25 @@ BEGIN
   INSERT INTO public.episode_result_applications (session_id, episode, league_id, season, skipped, applied_by)
   VALUES (_session_id, _episode, _league_id, _season, COALESCE(_skipped, false), auth.uid());
 
+  -- Who left is always recorded, even when the league takes no points for this episode
+  -- (for example, a league that started after it aired)
+  WITH upd AS (
+    UPDATE public.contestants
+       SET is_eliminated = true
+     WHERE session_id = _session_id
+       AND id = ANY(COALESCE(_eliminate, '{}'))
+       AND is_eliminated = false
+    RETURNING id
+  )
+  SELECT COALESCE(array_agg(id), '{}') INTO _out FROM upd;
+
+  -- Scored: the league sits on this episode (for manual extras). No points: it moves to the next one.
+  UPDATE public.game_sessions
+     SET episode = GREATEST(episode, _episode + CASE WHEN COALESCE(_skipped, false) THEN 1 ELSE 0 END),
+         is_post_merge = is_post_merge OR COALESCE(_post_merge, false)
+   WHERE id = _session_id;
+
+  -- Points only when the league is scoring this episode
   IF NOT COALESCE(_skipped, false) THEN
     WITH ins AS (
       INSERT INTO public.scoring_events (session_id, contestant_id, contestant_name, action, points, episode, created_at)
@@ -144,21 +163,6 @@ BEGIN
       RETURNING id
     )
     SELECT COALESCE(array_agg(id), '{}') INTO _ids FROM ins;
-
-    WITH upd AS (
-      UPDATE public.contestants
-         SET is_eliminated = true
-       WHERE session_id = _session_id
-         AND id = ANY(COALESCE(_eliminate, '{}'))
-         AND is_eliminated = false
-      RETURNING id
-    )
-    SELECT COALESCE(array_agg(id), '{}') INTO _out FROM upd;
-
-    UPDATE public.game_sessions
-       SET episode = GREATEST(episode, _episode),
-           is_post_merge = is_post_merge OR COALESCE(_post_merge, false)
-     WHERE id = _session_id;
 
     -- The finale: the Sole Survivor event finishes the season
     IF EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(_events, '[]'::jsonb)) AS e

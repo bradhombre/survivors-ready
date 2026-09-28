@@ -67,6 +67,10 @@ export function EpisodeResultsCard({
   const [overrides, setOverrides] = useState<Record<string, string>>({});
 
   const handled = useMemo(() => new Set(applications.keys()), [applications]);
+  const skipped = useMemo(
+    () => new Set([...applications.values()].filter((a) => a.skipped).map((a) => a.episode)),
+    [applications]
+  );
   const { next, blocked, waiting } = useMemo(() => nextPendingEpisode(results, handled), [results, handled]);
 
   // Picks for names we couldn't match belong to one episode
@@ -75,9 +79,9 @@ export function EpisodeResultsCard({
   const plan = useMemo(
     () =>
       next !== undefined
-        ? buildEpisodePlan({ published: results, episode: next, contestants, scoringEvents, scoringConfig, overrides })
+        ? buildEpisodePlan({ published: results, episode: next, contestants, scoringEvents, scoringConfig, overrides, skipped })
         : null,
-    [next, results, contestants, scoringEvents, scoringConfig, overrides]
+    [next, results, contestants, scoringEvents, scoringConfig, overrides, skipped]
   );
 
   // Most recent auto-scored episode, for the undo line (within 2 days)
@@ -175,14 +179,23 @@ export function EpisodeResultsCard({
     }
   };
 
+  // For leagues that started after this episode aired: record who left, give no points
   const skip = async () => {
-    if (!window.confirm(`Skip episode ${plan.episode}? Nothing is added and this card won't come back for it.`)) return;
+    const out = plan.eliminate.length;
+    const msg =
+      `No points for episode ${plan.episode}. ` +
+      (out > 0 ? `${out === 1 ? "The castaway who left is" : `The ${out} castaways who left are`} still marked out. ` : "") +
+      "This card won't come back for it.";
+    if (!window.confirm(msg)) return;
     setBusy(true);
     try {
-      await onApply(plan.episode, [], [], false, true);
+      await onApply(plan.episode, [], plan.eliminate, plan.postMerge, true);
       await refresh();
       setOpen(false);
-      toast.success(`Episode ${plan.episode} skipped. Nothing was added.`);
+      const ep = plan.episode;
+      toast.success(out > 0 ? `Episode ${ep}: marked who left, no points added` : `Episode ${ep}: no points added`, {
+        action: out > 0 ? { label: "Undo", onClick: () => undo(ep) } : undefined,
+      });
     } catch (err: any) {
       await refresh();
       if (err?.code === "23505") setOpen(false);
@@ -329,7 +342,7 @@ export function EpisodeResultsCard({
 
           <DialogFooter className="gap-2">
             <Button variant="ghost" className="h-11" onClick={skip} disabled={busy}>
-              Skip this episode
+              We started after this episode
             </Button>
             <Button variant="accent" className="h-11" onClick={apply} disabled={busy || needsPicks.length > 0}>
               {busy

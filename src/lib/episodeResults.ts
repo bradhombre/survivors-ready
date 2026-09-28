@@ -97,8 +97,10 @@ export function buildEpisodePlan(args: {
   scoringEvents: ScoringEvent[];
   scoringConfig: ScoringConfig | null | undefined;
   overrides?: Record<string, string>;
+  /** Episodes this league took no points for (it started after they aired) */
+  skipped?: Set<number>;
 }): EpisodePlan | null {
-  const { published, episode, contestants, scoringEvents, scoringConfig, overrides = {} } = args;
+  const { published, episode, contestants, scoringEvents, scoringConfig, overrides = {}, skipped = new Set<number>() } = args;
   const result = published.find((r) => r.episode === episode);
   if (!result) return null;
 
@@ -129,7 +131,16 @@ export function buildEpisodePlan(args: {
 
   const leftThisEpisode = new Set([...votedOut, ...quit, ...leftGame].map((c) => c.id));
 
-  const eventsFor = (c: Contestant) => scoringEvents.filter((e) => e.contestantId === c.id);
+  // A league that started late often hand-scores its first real episode under the app's default
+  // "Episode 1". Events numbered as a skipped episode count toward the next episode it played.
+  const eff = (n: number) => {
+    let x = n;
+    while (skipped.has(x)) x++;
+    return x;
+  };
+  const skippedBefore = [...skipped].filter((n) => n < episode).length;
+  const eventsFor = (c: Contestant) =>
+    scoringEvents.filter((e) => e.contestantId === c.id).map((e) => ({ ...e, episode: eff(e.episode) }));
   const isAction = (e: ScoringEvent, key: ActionKey) => normalizeAction(e.action) === normalizeAction(labelOf(key));
   const has = (c: Contestant, key: ActionKey, ep?: number) =>
     eventsFor(c).some((e) => (ep === undefined || e.episode === ep) && isAction(e, key));
@@ -172,7 +183,7 @@ export function buildEpisodePlan(args: {
     for (const c of owned) {
       if (!stillInAfter(c)) continue;
       const surv = eventsFor(c).filter(isSurvive);
-      if (surv.some((e) => e.episode >= episode) || surv.length >= episode) alreadyEntered++;
+      if (surv.some((e) => e.episode >= episode) || surv.length >= episode - skippedBefore) alreadyEntered++;
       else add(c, surviveKey);
     }
   }
@@ -216,7 +227,7 @@ export function buildEpisodePlan(args: {
     unmatchedExits: [...unmatchedExits],
     unmatchedOther: [...unmatchedOther],
     alreadyEntered,
-    existingForEpisode: scoringEvents.filter((e) => e.episode === episode).length,
+    existingForEpisode: scoringEvents.filter((e) => eff(e.episode) === episode).length,
     postMerge: result.post_merge,
   };
 }
