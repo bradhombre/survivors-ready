@@ -13,6 +13,7 @@ import { AdminPanel } from "@/components/AdminPanel";
 import { CommissionerChecklist } from "@/components/CommissionerChecklist";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { GameplayTips } from "@/components/GameplayTips";
+import { EpisodeResultsCard } from "@/components/EpisodeResultsCard";
 import { getPicksPerTeam } from "@/lib/picksPerTeam";
 import { LeagueInfo } from "@/components/LeagueInfo";
 import { SeasonCompleteBanner, NewSeasonDialog } from "@/components/SeasonCompleteBanner";
@@ -74,6 +75,7 @@ const LeagueDashboard = () => {
     addScoringEvent,
     undoLastEvent,
     undoEvent,
+    applyEpisodeResults,
     exportData,
     importData,
     startNewSeason,
@@ -444,6 +446,18 @@ const LeagueDashboard = () => {
       {viewMode === "game" && (
         <>
           <GameplayTips leagueId={leagueId!} />
+          {isLeagueAdmin && canShowGame && state.gameType !== "winner_takes_all" && leagueId && (
+            <EpisodeResultsCard
+              leagueId={leagueId}
+              sessionId={sessionId || undefined}
+              season={state.season}
+              userId={user?.id}
+              contestants={state.contestants}
+              scoringEvents={state.scoringEvents}
+              scoringConfig={scoringConfig}
+              onApply={applyEpisodeResults}
+            />
+          )}
           {!canShowGame && !isSuperAdmin && (
             <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
               <div className="glass rounded-[12px] flex items-center gap-3 px-4 py-3 text-sm">

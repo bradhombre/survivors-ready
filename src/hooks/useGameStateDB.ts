@@ -744,6 +744,44 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     debouncedReload();
   };
 
+  /**
+   * Auto-scoring: add one episode's planned events in a single batch, mark castaways out,
+   * and move the league to that episode (and post-merge) if it's behind. Returns events added.
+   */
+  const applyEpisodeResults = async (
+    episode: number,
+    events: { contestantId: string; contestantName: string; action: string; points: number }[],
+    eliminateIds: string[],
+    postMerge: boolean
+  ): Promise<number> => {
+    if (!sessionId) throw new Error("No active season");
+    if (events.length > 0) {
+      const { error } = await supabase.from("scoring_events").insert(
+        events.map((e) => ({
+          session_id: sessionId,
+          contestant_id: e.contestantId,
+          contestant_name: e.contestantName,
+          action: e.action,
+          points: e.points,
+          episode,
+        }))
+      );
+      if (error) throw error;
+    }
+    if (eliminateIds.length > 0) {
+      const { error } = await supabase.from("contestants").update({ is_eliminated: true }).in("id", eliminateIds);
+      if (error) throw error;
+    }
+    const sessionUpdates: Record<string, unknown> = {};
+    if (state.episode < episode) sessionUpdates.episode = episode;
+    if (postMerge && !state.isPostMerge) sessionUpdates.is_post_merge = true;
+    if (Object.keys(sessionUpdates).length > 0) {
+      await supabase.from("game_sessions").update(sessionUpdates as any).eq("id", sessionId);
+    }
+    debouncedReload();
+    return events.length;
+  };
+
   const exportData = () => {
     const dataStr = JSON.stringify(
       {
@@ -1051,6 +1089,7 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     addScoringEvent,
     undoLastEvent,
     undoEvent,
+    applyEpisodeResults,
     exportData,
     importData,
     updatePlayerAvatar,

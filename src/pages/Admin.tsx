@@ -14,9 +14,10 @@ import { NewsManager } from "@/components/admin/NewsManager";
 import { CastManager } from "@/components/admin/CastManager";
 import { AdminSettings } from "@/components/admin/AdminSettings";
 import { LeagueManager } from "@/components/admin/LeagueManager";
-import { ArrowLeft, Users, Newspaper, UserCircle, UserCog, Settings, Bug, Sparkles, Send, Loader2, MessageSquare } from "lucide-react";
+import { ArrowLeft, Users, Newspaper, UserCircle, UserCog, Settings, Bug, Sparkles, Send, Loader2, MessageSquare, Clapperboard } from "lucide-react";
 import { ChatMonitor } from "@/components/admin/ChatMonitor";
 import { UserManager } from "@/components/admin/UserManager";
+import { EpisodeResultsManager } from "@/components/admin/EpisodeResultsManager";
 import { Lockup } from "@/components/Lockup";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -180,6 +181,10 @@ export default function Admin() {
                 <Users className="h-4 w-4" />
                 Leagues
               </TabsTrigger>
+              <TabsTrigger value="episodes" className="gap-2">
+                <Clapperboard className="h-4 w-4" />
+                Episodes
+              </TabsTrigger>
               <TabsTrigger value="cast" className="gap-2">
                 <UserCircle className="h-4 w-4" />
                 Cast
@@ -208,6 +213,7 @@ export default function Admin() {
           </div>
 
           <TabsContent value="leagues"><LeagueManager /></TabsContent>
+          <TabsContent value="episodes"><EpisodeResultsManager /></TabsContent>
           <TabsContent value="cast"><CastManager /></TabsContent>
           <TabsContent value="news"><NewsManager /></TabsContent>
           <TabsContent value="chat"><ChatMonitor /></TabsContent>
