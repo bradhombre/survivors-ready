@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,31 +9,33 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { AlertTriangle, Sparkles, Undo2 } from "lucide-react";
 import type { Contestant, ScoringEvent } from "@/types/survivor";
 import type { ScoringConfig } from "@/lib/scoring";
-import { buildEpisodePlan, pointsByTeam, type ActionKey, type EpisodePlan } from "@/lib/episodeResults";
+import {
+  buildEpisodePlan,
+  nextPendingEpisode,
+  pointsByTeam,
+  type ActionKey,
+} from "@/lib/episodeResults";
 import { useLeagueEpisodeResults } from "@/hooks/useEpisodeResults";
 
+type PlannedInput = { contestantId: string; contestantName: string; action: string; points: number };
+
 interface EpisodeResultsCardProps {
-  leagueId: string;
-  sessionId?: string;
   season: number;
-  userId?: string;
+  sessionId?: string;
   contestants: Contestant[];
   scoringEvents: ScoringEvent[];
   scoringConfig: ScoringConfig | null;
-  onApply: (
-    episode: number,
-    events: { contestantId: string; contestantName: string; action: string; points: number }[],
-    eliminateIds: string[],
-    postMerge: boolean
-  ) => Promise<number>;
+  onApply: (episode: number, events: PlannedInput[], eliminateIds: string[], postMerge: boolean, skipped?: boolean) => Promise<number>;
+  onUndo: (episode: number) => Promise<number>;
 }
 
 const GROUPS: { key: ActionKey; label: string }[] = [
   { key: "VOTED_OUT", label: "Voted out" },
-  { key: "QUIT", label: "Quit or left" },
+  { key: "QUIT", label: "Quit" },
+  { key: "MEDEVAC", label: "Medevac or removed" },
   { key: "WIN_IMMUNITY", label: "Won individual immunity" },
   { key: "SURVIVE_PRE", label: "Survived (pre-merge)" },
   { key: "SURVIVE_POST", label: "Survived (post-merge)" },
@@ -42,47 +44,108 @@ const GROUPS: { key: ActionKey; label: string }[] = [
   { key: "WIN_SURVIVOR", label: "Sole Survivor" },
 ];
 
+const EXIT_KEYS = new Set<ActionKey>(["VOTED_OUT", "QUIT", "MEDEVAC"]);
 const fmt = (n: number) => (n > 0 ? `+${n}` : String(n));
+const NOT_IN_LEAGUE = "__none__";
 
 /**
  * Commissioner-only card: "Episode N results are in". One tap adds the big events the site
  * owner entered (voted out, survived, immunity, jury, finale), skipping anything already there.
  */
 export function EpisodeResultsCard({
-  leagueId,
-  sessionId,
   season,
-  userId,
+  sessionId,
   contestants,
   scoringEvents,
   scoringConfig,
   onApply,
+  onUndo,
 }: EpisodeResultsCardProps) {
-  const { results, handled, recordHandled } = useLeagueEpisodeResults(season, sessionId);
+  const { results, applications, ok, refresh } = useLeagueEpisodeResults(season, sessionId);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
 
-  const pending = useMemo(
-    () => results.filter((r) => !handled.has(r.episode)).sort((a, b) => a.episode - b.episode),
-    [results, handled]
-  );
-  const next = pending[0];
+  const handled = useMemo(() => new Set(applications.keys()), [applications]);
+  const { next, blocked, waiting } = useMemo(() => nextPendingEpisode(results, handled), [results, handled]);
 
-  const plan: EpisodePlan | null = useMemo(
+  // Picks for names we couldn't match belong to one episode
+  useEffect(() => setOverrides({}), [next]);
+
+  const plan = useMemo(
     () =>
-      next
-        ? buildEpisodePlan({ published: results, episode: next.episode, contestants, scoringEvents, scoringConfig })
+      next !== undefined
+        ? buildEpisodePlan({ published: results, episode: next, contestants, scoringEvents, scoringConfig, overrides })
         : null,
-    [next, results, contestants, scoringEvents, scoringConfig]
+    [next, results, contestants, scoringEvents, scoringConfig, overrides]
   );
 
-  if (!next || !plan) return null;
+  // Most recent auto-scored episode, for the undo line (within 2 days)
+  const lastApplied = useMemo(() => {
+    const recent = [...applications.values()]
+      .filter((a) => !a.skipped && a.events_added > 0 && Date.now() - Date.parse(a.applied_at) < 2 * 864e5)
+      .sort((a, b) => b.episode - a.episode);
+    return recent[0];
+  }, [applications]);
+
+  if (!ok) return null;
+
+  const undo = async (episode: number) => {
+    if (!window.confirm(`Undo episode ${episode} auto-scoring? The points it added are removed and castaways it marked out come back.`)) return;
+    setBusy(true);
+    try {
+      const n = await onUndo(episode);
+      await refresh();
+      toast.success(`Episode ${episode} auto-scoring undone (${n} events removed)`);
+    } catch (err: any) {
+      toast.error(`Couldn't undo: ${err?.message || "try again"}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const undoLine = lastApplied && !open && (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 sm:px-6 text-sm text-muted-foreground border-t-2 border-border">
+      <span className="tabular">
+        Episode {lastApplied.episode} was auto-scored ({lastApplied.events_added} events).
+      </span>
+      <button
+        type="button"
+        onClick={() => undo(lastApplied.episode)}
+        disabled={busy}
+        className="inline-flex min-h-[40px] items-center gap-1.5 font-bold text-foreground underline underline-offset-2"
+      >
+        <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
+        Undo
+      </button>
+    </div>
+  );
+
+  if (!plan) {
+    if (blocked) {
+      return (
+        <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
+          <div className="glass rounded-[12px] px-4 py-3 text-sm">
+            New episode results are being corrected. The Apply button comes back once they're fixed.
+          </div>
+        </div>
+      );
+    }
+    if (!lastApplied) return null;
+    return (
+      <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
+        <div className="plank overflow-hidden">{undoLine}</div>
+      </div>
+    );
+  }
 
   const grouped = GROUPS.map((g) => ({ ...g, events: plan.events.filter((e) => e.key === g.key) })).filter(
     (g) => g.events.length > 0
   );
   const teams = pointsByTeam(plan);
+  const needsPicks = plan.unmatchedExits.filter((n) => !(n in overrides));
   const nothingToAdd = plan.events.length === 0 && plan.eliminate.length === 0;
+  const stillIn = contestants.filter((c) => !c.isEliminated).sort((a, b) => a.name.localeCompare(b.name));
 
   const apply = async () => {
     setBusy(true);
@@ -93,26 +156,37 @@ export function EpisodeResultsCard({
         plan.eliminate,
         plan.postMerge
       );
-      await recordHandled({ leagueId, episode: plan.episode, eventsAdded: added, skipped: false, userId });
-      toast.success(
-        added > 0 ? `Episode ${plan.episode} scored: ${added} events added` : `Episode ${plan.episode} marked done`
-      );
+      await refresh();
       setOpen(false);
+      const ep = plan.episode;
+      toast.success(added > 0 ? `Episode ${ep} scored: ${added} events added` : `Episode ${ep} marked done`, {
+        action: added > 0 ? { label: "Undo", onClick: () => undo(ep) } : undefined,
+      });
     } catch (err: any) {
-      toast.error(`Couldn't apply episode ${plan.episode}: ${err?.message || "try again"}`);
+      await refresh();
+      if (err?.code === "23505") {
+        setOpen(false);
+        toast.info(`Episode ${plan.episode} was already applied by another commissioner.`);
+      } else {
+        toast.error(`Couldn't apply episode ${plan.episode}: ${err?.message || "try again"}`);
+      }
     } finally {
       setBusy(false);
     }
   };
 
   const skip = async () => {
+    if (!window.confirm(`Skip episode ${plan.episode}? Nothing is added and this card won't come back for it.`)) return;
     setBusy(true);
     try {
-      await recordHandled({ leagueId, episode: plan.episode, eventsAdded: 0, skipped: true, userId });
-      toast.success(`Episode ${plan.episode} skipped. Nothing was added.`);
+      await onApply(plan.episode, [], [], false, true);
+      await refresh();
       setOpen(false);
+      toast.success(`Episode ${plan.episode} skipped. Nothing was added.`);
     } catch (err: any) {
-      toast.error(err?.message || "Couldn't skip. Try again.");
+      await refresh();
+      if (err?.code === "23505") setOpen(false);
+      else toast.error(err?.message || "Couldn't skip. Try again.");
     } finally {
       setBusy(false);
     }
@@ -135,15 +209,16 @@ export function EpisodeResultsCard({
           <Button variant="accent" className="h-11" onClick={() => setOpen(true)}>
             Review and apply
           </Button>
-          {pending.length > 1 && (
+          {waiting > 1 && (
             <span className="text-sm font-semibold text-muted-foreground tabular">
-              {pending.length - 1} more episode{pending.length > 2 ? "s" : ""} waiting after this one
+              {waiting - 1} more episode{waiting > 2 ? "s" : ""} waiting after this one
             </span>
           )}
         </div>
+        {undoLine}
       </section>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Episode {plan.episode} results</DialogTitle>
@@ -154,23 +229,69 @@ export function EpisodeResultsCard({
             </DialogDescription>
           </DialogHeader>
 
+          {plan.existingForEpisode > 0 && (
+            <div className="flex items-start gap-2 rounded-[12px] border-2 border-accent bg-accent/10 px-3 py-2.5 text-sm">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-accent" aria-hidden="true" />
+              <span>
+                Your league already has <span className="tabular font-bold">{plan.existingForEpisode}</span> scores for
+                episode {plan.episode}. Check the list below before adding.
+              </span>
+            </div>
+          )}
+
+          {plan.unmatchedExits.length > 0 && (
+            <div className="space-y-3 rounded-[12px] border-2 border-accent bg-accent/10 p-3">
+              <p className="text-sm font-bold">
+                We couldn't find {plan.unmatchedExits.length === 1 ? "this castaway" : "these castaways"} in your league's
+                cast. Pick who it is so they're marked out:
+              </p>
+              {plan.unmatchedExits.map((name, i) => (
+                <div key={name} className="space-y-1">
+                  <label htmlFor={`er-pick-${i}`} className="text-sm font-semibold">
+                    {name}
+                  </label>
+                  <select
+                    id={`er-pick-${i}`}
+                    value={overrides[name] === "" ? NOT_IN_LEAGUE : overrides[name] ?? ""}
+                    onChange={(e) =>
+                      setOverrides((o) => ({ ...o, [name]: e.target.value === NOT_IN_LEAGUE ? "" : e.target.value }))
+                    }
+                    className="flex h-11 w-full rounded-[10px] border-2 border-input bg-card px-3 text-sm font-semibold"
+                  >
+                    <option value="" disabled>
+                      Choose a castaway
+                    </option>
+                    {stillIn.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                    <option value={NOT_IN_LEAGUE}>Not in my league</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
+
           {grouped.length > 0 && (
             <ul className="divide-y divide-border">
               {grouped.map((g) => {
                 const pts = g.events[0].points;
-                const many = g.events.length > 4;
                 return (
                   <li key={g.key} className="py-2.5 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-bold">{g.label}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {many
-                          ? `${g.events.length} castaways`
-                          : g.events.map((e) => e.contestantName).join(", ")}
+                      <p className="font-bold">
+                        {g.label}
+                        {g.events.length > 1 && <span className="font-semibold text-muted-foreground tabular"> · {g.events.length}</span>}
                       </p>
+                      <p className="text-sm text-muted-foreground">{g.events.map((e) => e.contestantName).join(", ")}</p>
                     </div>
-                    <span className="shrink-0 text-sm font-extrabold tabular text-success">
-                      {pts === 0 ? (g.key === "VOTED_OUT" || g.key === "QUIT" ? "Out" : "0") : fmt(pts)}
+                    <span
+                      className={`shrink-0 text-sm font-extrabold tabular ${
+                        pts < 0 ? "text-destructive" : pts > 0 ? "text-success" : "text-muted-foreground"
+                      }`}
+                    >
+                      {pts === 0 ? (EXIT_KEYS.has(g.key) ? "Out" : "0") : fmt(pts)}
                       {g.events.length > 1 && pts !== 0 ? " each" : ""}
                     </span>
                   </li>
@@ -197,21 +318,24 @@ export function EpisodeResultsCard({
             {plan.alreadyEntered > 0 && (
               <p className="tabular">{plan.alreadyEntered} already entered by hand, so they're skipped.</p>
             )}
-            {plan.unmatched.length > 0 && (
-              <p>
-                Not in your league's cast: {plan.unmatched.join(", ")}. Add those by hand if your cast uses a different
-                spelling.
-              </p>
+            {plan.unmatchedOther.length > 0 && (
+              <p>Not in your league's cast: {plan.unmatchedOther.join(", ")}. Add those by hand if needed.</p>
             )}
-            <p>Cries, Jeff tosses, idols and bonuses stay manual.</p>
+            <p>Cries, Jeff tosses, idols and bonuses stay manual. You can undo this afterward.</p>
           </div>
 
           <DialogFooter className="gap-2">
             <Button variant="ghost" className="h-11" onClick={skip} disabled={busy}>
               Skip this episode
             </Button>
-            <Button variant="accent" className="h-11" onClick={apply} disabled={busy}>
-              {busy ? "Adding…" : nothingToAdd ? "Mark as done" : `Add ${plan.events.length} events`}
+            <Button variant="accent" className="h-11" onClick={apply} disabled={busy || needsPicks.length > 0}>
+              {busy
+                ? "Adding…"
+                : needsPicks.length > 0
+                ? "Pick the castaway above"
+                : nothingToAdd
+                ? "Mark as done"
+                : `Add ${plan.events.length} events`}
             </Button>
           </DialogFooter>
         </DialogContent>

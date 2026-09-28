@@ -12,6 +12,8 @@ export type EpisodeResult = {
   episode: number;
   voted_out: string[];
   quit: string[];
+  /** Medevac or removed: out of the game, but no Quit penalty */
+  left_game: string[];
   immunity: string[];
   post_merge: boolean;
   jury_starts: boolean;
@@ -22,7 +24,10 @@ export type EpisodeResult = {
   updated_at?: string;
 };
 
-export type ActionKey = keyof typeof SCORING_ACTIONS;
+/** Not a configurable scoring action: 0 points, only records that a castaway left. */
+export const MEDEVAC_LABEL = "Medevac / Removed 🚑";
+
+export type ActionKey = keyof typeof SCORING_ACTIONS | "MEDEVAC";
 
 export type PlannedEvent = {
   contestantId: string;
@@ -38,14 +43,18 @@ export type EpisodePlan = {
   events: PlannedEvent[];
   /** Contestant ids to mark as out */
   eliminate: string[];
-  /** Names from the results that aren't in this league's cast */
-  unmatched: string[];
+  /** Exit names (voted out / quit / left) this league's cast doesn't have. Must be resolved before applying. */
+  unmatchedExits: string[];
+  /** Other names (immunity, finale) not in this league's cast; shown as a note */
+  unmatchedOther: string[];
   /** Events that were already entered by hand and are skipped */
   alreadyEntered: number;
+  /** Scores this league already has for this episode number (entered by hand) */
+  existingForEpisode: number;
   postMerge: boolean;
 };
 
-/** Lowercase, no accents, letters and digits only ("Thien An Nguyen" -> "thienannguyen"). */
+/** Lowercase, no accents, letters and digits only ("Thien-An Nguyen" -> "thienannguyen"). */
 export const normalizeName = (s: string) =>
   s
     .toLowerCase()
@@ -56,34 +65,27 @@ export const normalizeName = (s: string) =>
 /** Matches a scoring event's saved text to an action, ignoring emoji and spacing. */
 const normalizeAction = normalizeName;
 
-const labelOf = (key: ActionKey) => SCORING_ACTIONS[key].label;
+const labelOf = (key: ActionKey) => (key === "MEDEVAC" ? MEDEVAC_LABEL : SCORING_ACTIONS[key].label);
 
-/** Build a lookup from a results name to this league's contestant. */
-export function makeMatcher(contestants: Contestant[]) {
+/**
+ * Exact name matching only (ignoring case, accents, spaces and punctuation). A near-match could
+ * score the wrong castaway, so anything else is left for the commissioner to pick.
+ * `overrides` maps a results name to a contestant id, or to "" for "not in my league".
+ */
+export function makeMatcher(contestants: Contestant[], overrides: Record<string, string> = {}) {
   const byFull = new Map<string, Contestant>();
-  const byLast = new Map<string, Contestant[]>();
-  for (const c of contestants) {
-    byFull.set(normalizeName(c.name), c);
-    const parts = c.name.trim().split(/\s+/);
-    const last = normalizeName(parts[parts.length - 1] || "");
-    if (last) byLast.set(last, [...(byLast.get(last) || []), c]);
-  }
-  return (name: string): Contestant | undefined => {
-    const exact = byFull.get(normalizeName(name));
-    if (exact) return exact;
-    // Fallback: same last name and same first initial, only if that's unique in the league
-    const parts = name.trim().split(/\s+/);
-    const last = normalizeName(parts[parts.length - 1] || "");
-    const initial = normalizeName(parts[0] || "").charAt(0);
-    const candidates = (byLast.get(last) || []).filter((c) => normalizeName(c.name).charAt(0) === initial);
-    return candidates.length === 1 ? candidates[0] : undefined;
+  for (const c of contestants) byFull.set(normalizeName(c.name), c);
+  const byId = new Map(contestants.map((c) => [c.id, c]));
+  return (name: string): Contestant | null | undefined => {
+    if (name in overrides) return overrides[name] ? byId.get(overrides[name]) ?? undefined : null; // null = not in league
+    return byFull.get(normalizeName(name));
   };
 }
 
 /**
  * Everything a league needs added for one episode.
- * `published` is every published result for the season (any order); earlier episodes decide who
- * was already out, so a league that fell behind never gets survival points for a castaway who left.
+ * `published` is every published result for the season; earlier episodes decide who was
+ * already out, so a league that fell behind never gets survival points for someone who left.
  */
 export function buildEpisodePlan(args: {
   published: EpisodeResult[];
@@ -91,45 +93,44 @@ export function buildEpisodePlan(args: {
   contestants: Contestant[];
   scoringEvents: ScoringEvent[];
   scoringConfig: ScoringConfig | null | undefined;
+  overrides?: Record<string, string>;
 }): EpisodePlan | null {
-  const { published, episode, contestants, scoringEvents, scoringConfig } = args;
+  const { published, episode, contestants, scoringEvents, scoringConfig, overrides = {} } = args;
   const result = published.find((r) => r.episode === episode);
   if (!result) return null;
 
-  const match = makeMatcher(contestants);
-  const unmatched = new Set<string>();
-  const resolve = (names: string[]) =>
+  const match = makeMatcher(contestants, overrides);
+  const resolve = (names: string[], unmatched?: Set<string>) =>
     names
       .map((n) => {
         const c = match(n);
-        if (!c) unmatched.add(n);
-        return c;
+        if (c === undefined) unmatched?.add(n);
+        return c || undefined;
       })
       .filter((c): c is Contestant => !!c);
 
   // Who had left before this episode (per the published results)
   const leftBefore = new Set<string>();
   for (const r of published) {
-    if (r.episode < episode) resolve([...r.voted_out, ...r.quit]).forEach((c) => leftBefore.add(c.id));
+    if (r.episode < episode) resolve([...r.voted_out, ...r.quit, ...(r.left_game || [])]).forEach((c) => leftBefore.add(c.id));
   }
-  // resolve() above may have flagged names from earlier episodes; only report this episode's
-  unmatched.clear();
 
-  const votedOut = resolve(result.voted_out);
-  const quit = resolve(result.quit);
-  const immunity = resolve(result.immunity);
-  const finalTribal = resolve(result.final_tribal);
-  const winner = result.winner ? resolve([result.winner])[0] : undefined;
+  const unmatchedExits = new Set<string>();
+  const unmatchedOther = new Set<string>();
+  const votedOut = resolve(result.voted_out, unmatchedExits);
+  const quit = resolve(result.quit, unmatchedExits);
+  const leftGame = resolve(result.left_game || [], unmatchedExits);
+  const immunity = resolve(result.immunity, unmatchedOther);
+  const finalTribal = resolve(result.final_tribal, unmatchedOther);
+  const winner = result.winner ? resolve([result.winner], unmatchedOther)[0] : undefined;
 
-  const leftThisEpisode = new Set([...votedOut, ...quit].map((c) => c.id));
+  const leftThisEpisode = new Set([...votedOut, ...quit, ...leftGame].map((c) => c.id));
 
+  const eventsFor = (c: Contestant) => scoringEvents.filter((e) => e.contestantId === c.id);
+  const isAction = (e: ScoringEvent, key: ActionKey) => normalizeAction(e.action) === normalizeAction(labelOf(key));
   const has = (c: Contestant, key: ActionKey, ep?: number) =>
-    scoringEvents.some(
-      (e) =>
-        e.contestantId === c.id &&
-        (ep === undefined || e.episode === ep) &&
-        normalizeAction(e.action) === normalizeAction(labelOf(key))
-    );
+    eventsFor(c).some((e) => (ep === undefined || e.episode === ep) && isAction(e, key));
+  const isSurvive = (e: ScoringEvent) => isAction(e, "SURVIVE_PRE") || isAction(e, "SURVIVE_POST");
 
   const events: PlannedEvent[] = [];
   const eliminate = new Set<string>();
@@ -141,22 +142,18 @@ export function buildEpisodePlan(args: {
       owner: c.owner ?? null,
       key,
       action: labelOf(key),
-      points: getPoints(key, scoringConfig),
+      points: key === "MEDEVAC" ? 0 : getPoints(key, scoringConfig),
     });
 
-  // Exits: always recorded (even if the league gives 0 points), because they mark who's out
+  // Exits: always recorded (even at 0 points), because they mark who's out
   for (const [list, key] of [
     [votedOut, "VOTED_OUT"],
     [quit, "QUIT"],
+    [leftGame, "MEDEVAC"],
   ] as const) {
     for (const c of list) {
-      if (has(c, key)) {
-        alreadyEntered++;
-      } else if (!c.isEliminated) {
-        add(c, key);
-      } else {
-        alreadyEntered++;
-      }
+      if (c.isEliminated || has(c, key)) alreadyEntered++;
+      else add(c, key);
       if (!c.isEliminated) eliminate.add(c.id);
     }
   }
@@ -164,12 +161,15 @@ export function buildEpisodePlan(args: {
   const owned = contestants.filter((c) => !!c.owner);
   const stillInAfter = (c: Contestant) => !c.isEliminated && !leftBefore.has(c.id) && !leftThisEpisode.has(c.id);
 
-  // Survived the episode
-  const surviveKey: ActionKey = result.post_merge ? "SURVIVE_POST" : "SURVIVE_PRE";
+  // Survived the episode. Skipped if this episode is already scored by hand, if the league has
+  // survival for a later episode (its numbering runs ahead), or if the castaway already has
+  // survival points for this many episodes (numbering runs behind).
+  const surviveKey = result.post_merge ? "SURVIVE_POST" : "SURVIVE_PRE";
   if (isActionEnabled(surviveKey, scoringConfig)) {
     for (const c of owned) {
       if (!stillInAfter(c)) continue;
-      if (has(c, "SURVIVE_PRE", episode) || has(c, "SURVIVE_POST", episode)) alreadyEntered++;
+      const surv = eventsFor(c).filter(isSurvive);
+      if (surv.some((e) => e.episode >= episode) || surv.length >= episode) alreadyEntered++;
       else add(c, surviveKey);
     }
   }
@@ -183,10 +183,10 @@ export function buildEpisodePlan(args: {
     }
   }
 
-  // Jury starts: everyone still in after this episode makes the jury
+  // Jury starts this episode: everyone still in afterward, plus the first juror voted out now
   if (result.jury_starts && isActionEnabled("MAKE_JURY", scoringConfig)) {
-    for (const c of owned) {
-      if (!stillInAfter(c)) continue;
+    const jurors = [...owned.filter(stillInAfter), ...votedOut.filter((c) => !!c.owner)];
+    for (const c of jurors) {
       if (has(c, "MAKE_JURY")) alreadyEntered++;
       else add(c, "MAKE_JURY");
     }
@@ -200,7 +200,7 @@ export function buildEpisodePlan(args: {
       else add(c, "MAKE_FINAL");
     }
   }
-  // The winner event also marks the season as finished, so it's added even at 0 points
+  // The winner event also finishes the season, so it's added even at 0 points
   if (winner) {
     if (has(winner, "WIN_SURVIVOR")) alreadyEntered++;
     else add(winner, "WIN_SURVIVOR");
@@ -210,8 +210,10 @@ export function buildEpisodePlan(args: {
     episode,
     events,
     eliminate: [...eliminate],
-    unmatched: [...unmatched],
+    unmatchedExits: [...unmatchedExits],
+    unmatchedOther: [...unmatchedOther],
     alreadyEntered,
+    existingForEpisode: scoringEvents.filter((e) => e.episode === episode).length,
     postMerge: result.post_merge,
   };
 }
@@ -224,4 +226,22 @@ export function pointsByTeam(plan: EpisodePlan) {
     totals.set(e.owner, (totals.get(e.owner) || 0) + e.points);
   }
   return [...totals.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+/**
+ * Which published episode a league should see next: the lowest one it hasn't handled, but only
+ * if no earlier episode is missing (so a fix-in-progress never scores out of order).
+ */
+export function nextPendingEpisode(published: EpisodeResult[], handled: Set<number>) {
+  const eps = [...new Set(published.map((r) => r.episode))].sort((a, b) => a - b);
+  if (eps.length === 0) return { next: undefined as number | undefined, blocked: false, waiting: 0 };
+  const pending = eps.filter((e) => !handled.has(e));
+  if (pending.length === 0) return { next: undefined, blocked: false, waiting: 0 };
+  const first = pending[0];
+  // A gap between the lowest published episode and `first` means results are being fixed
+  const lowest = eps[0];
+  for (let e = lowest; e < first; e++) {
+    if (!eps.includes(e)) return { next: undefined, blocked: true, waiting: pending.length };
+  }
+  return { next: first, blocked: false, waiting: pending.length };
 }

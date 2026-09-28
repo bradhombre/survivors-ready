@@ -76,6 +76,7 @@ const LeagueDashboard = () => {
     undoLastEvent,
     undoEvent,
     applyEpisodeResults,
+    undoEpisodeResults,
     exportData,
     importData,
     startNewSeason,
@@ -91,7 +92,7 @@ const LeagueDashboard = () => {
   } = useGameStateDB({ leagueId });
   
   const { user, isAdmin, playerName, loading, signOut } = useAuth();
-  const { isLeagueAdmin, loading: roleLoading } = useLeagueRole(leagueId);
+  const { isLeagueAdmin, role: leagueRole, loading: roleLoading } = useLeagueRole(leagueId);
   const { getMyTeam, teams } = useLeagueTeams({ leagueId });
   const { isSuperAdmin } = useIsSuperAdmin();
   const navigate = useNavigate();
@@ -446,16 +447,16 @@ const LeagueDashboard = () => {
       {viewMode === "game" && (
         <>
           <GameplayTips leagueId={leagueId!} />
-          {isLeagueAdmin && canShowGame && state.gameType !== "winner_takes_all" && leagueId && (
+          {/* Auto-scoring card: commissioners of this league only (not the site owner browsing other leagues) */}
+          {leagueRole === "league_admin" && canShowGame && state.gameType !== "winner_takes_all" && (
             <EpisodeResultsCard
-              leagueId={leagueId}
-              sessionId={sessionId || undefined}
               season={state.season}
-              userId={user?.id}
+              sessionId={sessionId || undefined}
               contestants={state.contestants}
               scoringEvents={state.scoringEvents}
               scoringConfig={scoringConfig}
               onApply={applyEpisodeResults}
+              onUndo={undoEpisodeResults}
             />
           )}
           {!canShowGame && !isSuperAdmin && (

@@ -676,7 +676,7 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
       episode: state.episode,
     });
 
-    if (action.includes("Quit") || action.includes("Voted Out")) {
+    if (action.includes("Quit") || action.includes("Voted Out") || action.includes("Medevac")) {
       await updateContestant(contestantId, { isEliminated: true });
     }
 
@@ -706,7 +706,7 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     }
 
     // If the event was elimination, un-eliminate the contestant
-    if (lastEvent.action.includes("Quit") || lastEvent.action.includes("Voted Out")) {
+    if (lastEvent.action.includes("Quit") || lastEvent.action.includes("Voted Out") || lastEvent.action.includes("Medevac")) {
       await supabase.from("contestants")
         .update({ is_eliminated: false })
         .eq("id", lastEvent.contestantId);
@@ -734,7 +734,7 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     }
 
     // If the event was elimination, un-eliminate the contestant
-    if (event.action.includes("Quit") || event.action.includes("Voted Out")) {
+    if (event.action.includes("Quit") || event.action.includes("Voted Out") || event.action.includes("Medevac")) {
       await supabase.from("contestants")
         .update({ is_eliminated: false })
         .eq("id", event.contestantId);
@@ -745,41 +745,46 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
   };
 
   /**
-   * Auto-scoring: add one episode's planned events in a single batch, mark castaways out,
-   * and move the league to that episode (and post-merge) if it's behind. Returns events added.
+   * Auto-scoring: apply one episode in a single database transaction (apply_episode_results).
+   * The function claims the episode first, so a second tap or a second commissioner can't add
+   * points twice. Reloads before returning so the next episode's plan uses fresh data.
    */
   const applyEpisodeResults = async (
     episode: number,
     events: { contestantId: string; contestantName: string; action: string; points: number }[],
     eliminateIds: string[],
-    postMerge: boolean
+    postMerge: boolean,
+    skipped = false
   ): Promise<number> => {
     if (!sessionId) throw new Error("No active season");
-    if (events.length > 0) {
-      const { error } = await supabase.from("scoring_events").insert(
-        events.map((e) => ({
-          session_id: sessionId,
-          contestant_id: e.contestantId,
-          contestant_name: e.contestantName,
-          action: e.action,
-          points: e.points,
-          episode,
-        }))
-      );
-      if (error) throw error;
-    }
-    if (eliminateIds.length > 0) {
-      const { error } = await supabase.from("contestants").update({ is_eliminated: true }).in("id", eliminateIds);
-      if (error) throw error;
-    }
-    const sessionUpdates: Record<string, unknown> = {};
-    if (state.episode < episode) sessionUpdates.episode = episode;
-    if (postMerge && !state.isPostMerge) sessionUpdates.is_post_merge = true;
-    if (Object.keys(sessionUpdates).length > 0) {
-      await supabase.from("game_sessions").update(sessionUpdates as any).eq("id", sessionId);
-    }
-    debouncedReload();
-    return events.length;
+    const { data, error } = await (supabase as any).rpc("apply_episode_results", {
+      _session_id: sessionId,
+      _episode: episode,
+      _events: events.map((e) => ({
+        contestant_id: e.contestantId,
+        contestant_name: e.contestantName,
+        action: e.action,
+        points: e.points,
+      })),
+      _eliminate: eliminateIds,
+      _post_merge: postMerge,
+      _skipped: skipped,
+    });
+    await loadGameState(sessionId);
+    if (error) throw error;
+    return (data as number) ?? 0;
+  };
+
+  /** Undo one episode's auto-scoring (removes exactly what it added). */
+  const undoEpisodeResults = async (episode: number): Promise<number> => {
+    if (!sessionId) throw new Error("No active season");
+    const { data, error } = await (supabase as any).rpc("undo_episode_results", {
+      _session_id: sessionId,
+      _episode: episode,
+    });
+    await loadGameState(sessionId);
+    if (error) throw error;
+    return (data as number) ?? 0;
   };
 
   const exportData = () => {
@@ -1090,6 +1095,7 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     undoLastEvent,
     undoEvent,
     applyEpisodeResults,
+    undoEpisodeResults,
     exportData,
     importData,
     updatePlayerAvatar,

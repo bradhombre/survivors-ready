@@ -1,73 +1,79 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { EpisodeResult } from "@/lib/episodeResults";
 
 // The episode results tables are newer than the generated Supabase types
 const db = supabase as unknown as { from: (table: string) => any };
 
+export type Application = { episode: number; skipped: boolean; events_added: number; applied_at: string };
+
 /**
  * Published episode results for a season, plus which episodes this league session has
- * already applied or skipped. Quietly returns nothing if the tables don't exist yet.
+ * already applied or skipped. Refreshes when the app comes back to the foreground and every
+ * minute while visible. If either query fails, `ok` is false and the card stays hidden.
  */
 export function useLeagueEpisodeResults(season: number | undefined, sessionId: string | undefined) {
   const [results, setResults] = useState<EpisodeResult[]>([]);
-  const [handled, setHandled] = useState<Set<number>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [applications, setApplications] = useState<Map<number, Application>>(new Map());
+  const [ok, setOk] = useState(false);
+  const requestId = useRef(0);
 
   const refresh = useCallback(async () => {
     if (!season || !sessionId) return;
+    const id = ++requestId.current;
     const [r, a] = await Promise.all([
       db.from("episode_results").select("*").eq("season", season).eq("status", "published").order("episode"),
-      db.from("episode_result_applications").select("episode").eq("session_id", sessionId),
+      db.from("episode_result_applications").select("episode, skipped, events_added, applied_at").eq("session_id", sessionId),
     ]);
-    if (!r.error) setResults((r.data as EpisodeResult[]) || []);
-    if (!a.error) setHandled(new Set(((a.data as { episode: number }[]) || []).map((x) => x.episode)));
-    setLoading(false);
+    if (id !== requestId.current) return; // a newer refresh already landed
+    if (r.error || a.error) {
+      setOk(false);
+      return;
+    }
+    setResults((r.data as EpisodeResult[]) || []);
+    setApplications(new Map(((a.data as Application[]) || []).map((x) => [x.episode, x])));
+    setOk(true);
   }, [season, sessionId]);
 
   useEffect(() => {
     refresh();
-    const onFocus = () => refresh();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, 60_000);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(timer);
+    };
   }, [refresh]);
 
-  const recordHandled = useCallback(
-    async (args: { leagueId: string; episode: number; eventsAdded: number; skipped: boolean; userId?: string }) => {
-      if (!season || !sessionId) return;
-      const { error } = await db.from("episode_result_applications").insert({
-        session_id: sessionId,
-        league_id: args.leagueId,
-        season,
-        episode: args.episode,
-        events_added: args.eventsAdded,
-        skipped: args.skipped,
-        applied_by: args.userId ?? null,
-      });
-      // A second commissioner may have beaten us to it; that's fine
-      if (error && error.code !== "23505") throw error;
-      setHandled((prev) => new Set(prev).add(args.episode));
-    },
-    [season, sessionId]
-  );
-
-  return { results, handled, loading, refresh, recordHandled };
+  return { results, applications, ok, refresh };
 }
 
 /** All results for a season, any status. Site owner only (RLS). */
 export function useAdminEpisodeResults(season: number | undefined) {
   const [results, setResults] = useState<EpisodeResult[]>([]);
+  const [resultsSeason, setResultsSeason] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(0);
 
   const refresh = useCallback(async () => {
     if (!season) return;
+    const id = ++requestId.current;
     setLoading(true);
     const { data, error } = await db.from("episode_results").select("*").eq("season", season).order("episode");
+    if (id !== requestId.current) return;
     if (error) setError(error.message);
     else {
       setError(null);
       setResults((data as EpisodeResult[]) || []);
+      setResultsSeason(season);
     }
     setLoading(false);
   }, [season]);
@@ -83,6 +89,7 @@ export function useAdminEpisodeResults(season: number | undefined) {
         episode: row.episode,
         voted_out: row.voted_out,
         quit: row.quit,
+        left_game: row.left_game || [],
         immunity: row.immunity,
         post_merge: row.post_merge,
         jury_starts: row.jury_starts,
@@ -104,5 +111,5 @@ export function useAdminEpisodeResults(season: number | undefined) {
     [refresh]
   );
 
-  return { results, loading, error, refresh, save };
+  return { results, resultsSeason, loading, error, refresh, save };
 }

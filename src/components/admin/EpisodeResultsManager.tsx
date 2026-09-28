@@ -14,18 +14,31 @@ import type { EpisodeResult } from "@/lib/episodeResults";
 
 type CastRow = { name: string; tribe: string | null };
 
-const empty = (season: number, episode: number): EpisodeResult => ({
+const empty = (season: number, episode: number, postMerge = false): EpisodeResult => ({
   season,
   episode,
   voted_out: [],
   quit: [],
+  left_game: [],
   immunity: [],
-  post_merge: false,
+  post_merge: postMerge,
   jury_starts: false,
   final_tribal: [],
   winner: null,
   status: "draft",
 });
+
+const comparable = (r: EpisodeResult) =>
+  JSON.stringify([
+    [...r.voted_out].sort(),
+    [...r.quit].sort(),
+    [...(r.left_game || [])].sort(),
+    [...r.immunity].sort(),
+    r.post_merge,
+    r.jury_starts,
+    [...r.final_tribal].sort(),
+    r.winner || null,
+  ]);
 
 /** A row of castaway pills; tapping toggles a name in `value`. */
 function CastPicker({
@@ -93,51 +106,68 @@ export function EpisodeResultsManager() {
   const { user } = useAuth();
   const currentSeason = parseInt((settings.current_season || "").match(/\d{1,4}/)?.[0] || "", 10) || undefined;
   const [season, setSeason] = useState<number | undefined>(undefined);
+  const [seasonText, setSeasonText] = useState("");
   useEffect(() => {
-    if (!season && currentSeason) setSeason(currentSeason);
+    if (!season && currentSeason) {
+      setSeason(currentSeason);
+      setSeasonText(String(currentSeason));
+    }
   }, [currentSeason, season]);
 
-  const { results, loading, error, save } = useAdminEpisodeResults(season);
+  const { results: rawResults, resultsSeason, loading, error, save } = useAdminEpisodeResults(season);
+  // Never use results that belong to a different season than the one on screen
+  const results = resultsSeason === season ? rawResults : [];
   const [cast, setCast] = useState<CastRow[]>([]);
   const [episode, setEpisode] = useState<number>(1);
   const [form, setForm] = useState<EpisodeResult | null>(null);
   const [showFinale, setShowFinale] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Official cast for the season
+  // Official cast for the season (ignore late answers for a season we've moved away from)
   useEffect(() => {
     if (!season) return;
+    let cancelled = false;
+    setCast([]);
     supabase
       .from("master_contestants")
       .select("name, tribe")
       .eq("season_number", season)
       .order("name")
-      .then(({ data }) => setCast((data as CastRow[]) || []));
+      .then(({ data }) => {
+        if (!cancelled) setCast((data as CastRow[]) || []);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [season]);
 
   // Open on the next episode that has no results yet (once per season, not after every save)
   const openedFor = useRef<number | undefined>(undefined);
   useEffect(() => {
-    if (loading || !season || openedFor.current === season) return;
+    if (loading || !season || resultsSeason !== season || openedFor.current === season) return;
     openedFor.current = season;
     const maxEp = results.reduce((m, r) => Math.max(m, r.episode), 0);
     setEpisode(maxEp > 0 ? maxEp + (results.find((r) => r.episode === maxEp)?.status === "published" ? 1 : 0) : 1);
-  }, [loading, season, results]);
+  }, [loading, season, resultsSeason, results]);
 
   const existing = results.find((r) => r.episode === episode);
+  const previous = results.find((r) => r.episode === episode - 1);
+  const baseline = useMemo(
+    () => (season ? (existing ? { left_game: [], ...existing } : empty(season, episode, previous?.post_merge ?? false)) : null),
+    [season, episode, existing, previous?.post_merge]
+  );
   useEffect(() => {
-    if (!season) return;
-    const base = existing ? { ...existing } : empty(season, episode);
-    setForm(base);
-    setShowFinale(!!(base.final_tribal.length || base.winner));
-  }, [season, episode, existing]);
+    if (!baseline) return;
+    setForm(baseline);
+    setShowFinale(!!(baseline.final_tribal.length || baseline.winner));
+  }, [baseline]);
 
   // Who had already left before this episode (from saved results)
   const outBefore = useMemo(() => {
     const m = new Map<string, number>();
     for (const r of results) {
       if (r.episode >= episode) continue;
-      for (const n of [...r.voted_out, ...r.quit]) if (!m.has(n)) m.set(n, r.episode);
+      for (const n of [...r.voted_out, ...r.quit, ...(r.left_game || [])]) if (!m.has(n)) m.set(n, r.episode);
     }
     return m;
   }, [results, episode]);
@@ -146,15 +176,49 @@ export function EpisodeResultsManager() {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
   }
 
+  const dirty = !!baseline && comparable(form) !== comparable(baseline);
   const set = (patch: Partial<EpisodeResult>) => setForm((f) => (f ? { ...f, ...patch } : f));
+  const goToEpisode = (ep: number) => {
+    if (ep === episode) return;
+    if (dirty && !window.confirm(`Discard your unsaved changes to episode ${episode}?`)) return;
+    setEpisode(ep);
+  };
+  const commitSeason = () => {
+    const n = parseInt(seasonText, 10);
+    if (!n || n === season) {
+      setSeasonText(String(season));
+      return;
+    }
+    if (dirty && !window.confirm(`Discard your unsaved changes to episode ${episode}?`)) {
+      setSeasonText(String(season));
+      return;
+    }
+    setSeason(n);
+  };
 
+  const exits = [...form.voted_out, ...form.quit, ...(form.left_game || [])];
   const warnings: string[] = [];
   const both = form.voted_out.filter((n) => form.immunity.includes(n));
   if (both.length) warnings.push(`${both.join(", ")} can't be voted out and win immunity in the same episode.`);
-  const already = [...form.voted_out, ...form.quit].filter((n) => outBefore.has(n));
+  const twice = exits.filter((n, i) => exits.indexOf(n) !== i);
+  if (twice.length) warnings.push(`${[...new Set(twice)].join(", ")} is in more than one "left" list.`);
+  const already = exits.filter((n) => outBefore.has(n));
   if (already.length) warnings.push(`${already.join(", ")} already left in an earlier episode.`);
-  if (!form.voted_out.length && !form.quit.length) warnings.push("Nobody left this episode. Is that right?");
-  const blocking = both.length > 0;
+  const deadImmunity = [...form.immunity, ...form.final_tribal, ...(form.winner ? [form.winner] : [])].filter((n) => outBefore.has(n));
+  if (deadImmunity.length) warnings.push(`${[...new Set(deadImmunity)].join(", ")} already left, so can't win immunity or reach the end.`);
+  if (!exits.length) warnings.push("Nobody left this episode. Is that right?");
+  const earlierMerged = results.some((r) => r.episode < episode && r.post_merge);
+  if (earlierMerged && !form.post_merge) warnings.push("An earlier episode is post-merge but this one isn't. Check the switch below.");
+
+  // Publishing order: every earlier episode (from the first one entered) must already be live
+  const firstEntered = results.reduce((m, r) => Math.min(m, r.episode), Infinity);
+  const missingEarlier: number[] = [];
+  for (let e = Number.isFinite(firstEntered) ? firstEntered : episode; e < episode; e++) {
+    if (results.find((r) => r.episode === e)?.status !== "published") missingEarlier.push(e);
+  }
+  const laterLive = results.some((r) => r.episode > episode && r.status === "published");
+  const blocking = both.length > 0 || twice.length > 0;
+  const isPublished = existing?.status === "published";
 
   const doSave = async (publish: boolean | null) => {
     setSaving(true);
@@ -165,7 +229,7 @@ export function EpisodeResultsManager() {
           ? `Episode ${episode} is live. Commissioners will see "Episode ${episode} results are in".`
           : publish === false
           ? `Episode ${episode} is back to draft. Commissioners won't see it.`
-          : `Episode ${episode} saved`
+          : `Episode ${episode} saved as a draft`
       );
     } catch (err: any) {
       toast.error(`Couldn't save: ${err?.message || "try again"}`);
@@ -173,8 +237,6 @@ export function EpisodeResultsManager() {
       setSaving(false);
     }
   };
-
-  const isPublished = existing?.status === "published";
 
   return (
     <div className="space-y-6">
@@ -185,15 +247,15 @@ export function EpisodeResultsManager() {
             Episode results
           </CardTitle>
           <CardDescription>
-            Enter each episode once after it airs. When you publish, every drafted full-fantasy league on Season {season}{" "}
-            gets an "Episode results are in" card, and one tap adds voted out, survival, immunity, jury and finale points.
-            Cries, Jeff tosses, idols and bonuses stay with commissioners.
+            Enter each episode once after it airs. When you publish, the commissioner of every drafted full-fantasy
+            league on Season {season} gets an "Episode results are in" card, and one tap adds voted out, survival,
+            immunity, jury and finale points. Cries, Jeff tosses, idols and bonuses stay with commissioners.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {error && (
             <div className="rounded-[12px] border-2 border-accent bg-accent/10 px-4 py-3 text-sm">
-              Couldn't load results: {error}. If this says the table doesn't exist, the database change for auto-scoring
+              Couldn't load results: {error}. If this says the table doesn't exist, the auto-scoring database change
               hasn't been applied yet.
             </div>
           )}
@@ -205,22 +267,24 @@ export function EpisodeResultsManager() {
                 id="er-season"
                 type="number"
                 min={1}
-                value={season}
-                onChange={(e) => setSeason(parseInt(e.target.value) || season)}
+                value={seasonText}
+                onChange={(e) => setSeasonText(e.target.value)}
+                onBlur={commitSeason}
+                onKeyDown={(e) => e.key === "Enter" && commitSeason()}
                 className="w-24 font-extrabold tabular"
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="er-episode" className="label-caps text-muted-foreground">Episode</Label>
-              <Input
-                id="er-episode"
-                type="number"
-                min={1}
-                max={30}
-                value={episode}
-                onChange={(e) => setEpisode(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-24 font-extrabold tabular"
-              />
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="icon" aria-label="Previous episode" onClick={() => goToEpisode(Math.max(1, episode - 1))}>
+                  −
+                </Button>
+                <span className="w-10 text-center text-2xl font-black tabular" aria-live="polite">{episode}</span>
+                <Button type="button" variant="outline" size="icon" aria-label="Next episode" onClick={() => goToEpisode(episode + 1)}>
+                  +
+                </Button>
+              </div>
             </div>
             <span
               className={`rounded-full px-3 py-1 text-xs font-bold ${
@@ -233,6 +297,7 @@ export function EpisodeResultsManager() {
             >
               {isPublished ? "Live for commissioners" : existing ? "Draft, not live" : "Not entered yet"}
             </span>
+            {dirty && <span className="text-xs font-bold text-accent">Unsaved changes</span>}
           </div>
 
           {cast.length === 0 ? (
@@ -241,20 +306,23 @@ export function EpisodeResultsManager() {
             </p>
           ) : (
             <>
-              <CastPicker
-                id="er-out"
-                label="Voted out"
-                cast={cast}
-                value={form.voted_out}
-                onChange={(v) => set({ voted_out: v })}
-                outBefore={outBefore}
-              />
+              <CastPicker id="er-out" label="Voted out" cast={cast} value={form.voted_out} onChange={(v) => set({ voted_out: v })} outBefore={outBefore} />
               <CastPicker
                 id="er-quit"
-                label="Quit, medevac or removed"
+                label="Quit"
+                hint="Chose to leave. Leagues' Quit penalty applies."
                 cast={cast}
                 value={form.quit}
                 onChange={(v) => set({ quit: v })}
+                outBefore={outBefore}
+              />
+              <CastPicker
+                id="er-left"
+                label="Medevac or removed"
+                hint="Out of the game, with no penalty."
+                cast={cast}
+                value={form.left_game || []}
+                onChange={(v) => set({ left_game: v })}
                 outBefore={outBefore}
               />
               <CastPicker
@@ -272,14 +340,14 @@ export function EpisodeResultsManager() {
                   <Switch id="er-merge" checked={form.post_merge} onCheckedChange={(v) => set({ post_merge: v })} />
                   <span className="text-sm">
                     <b className="block">Post-merge episode</b>
-                    <span className="text-muted-foreground">Everyone still in gets the post-merge survival points.</span>
+                    <span className="text-muted-foreground">Everyone still in gets post-merge survival points. Carries over from the last episode.</span>
                   </span>
                 </label>
                 <label htmlFor="er-jury" className="glass rounded-[12px] flex items-start gap-3 p-3 cursor-pointer">
                   <Switch id="er-jury" checked={form.jury_starts} onCheckedChange={(v) => set({ jury_starts: v })} />
                   <span className="text-sm">
-                    <b className="block">The jury starts this episode</b>
-                    <span className="text-muted-foreground">Everyone still in after this episode gets Make Jury, once.</span>
+                    <b className="block">The first juror is voted out this episode</b>
+                    <span className="text-muted-foreground">Everyone still in, plus the castaway voted out now, gets Make Jury (once).</span>
                   </span>
                 </label>
               </div>
@@ -290,14 +358,7 @@ export function EpisodeResultsManager() {
                 </Button>
               ) : (
                 <div className="space-y-4 rounded-[12px] border-2 border-border p-4">
-                  <CastPicker
-                    id="er-ftc"
-                    label="Made Final Tribal"
-                    cast={cast}
-                    value={form.final_tribal}
-                    onChange={(v) => set({ final_tribal: v })}
-                    outBefore={outBefore}
-                  />
+                  <CastPicker id="er-ftc" label="Made Final Tribal" cast={cast} value={form.final_tribal} onChange={(v) => set({ final_tribal: v })} outBefore={outBefore} />
                   <div className="space-y-1.5">
                     <Label htmlFor="er-winner" className="label-caps text-muted-foreground">Sole Survivor</Label>
                     <select
@@ -313,7 +374,7 @@ export function EpisodeResultsManager() {
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-muted-foreground">Adding the winner also marks each league's season as finished.</p>
+                    <p className="text-xs text-muted-foreground">When a league applies the winner, its season is marked finished.</p>
                   </div>
                 </div>
               )}
@@ -329,8 +390,19 @@ export function EpisodeResultsManager() {
                 </ul>
               )}
 
+              {missingEarlier.length > 0 && (
+                <p className="text-sm font-semibold">
+                  Publish episode{missingEarlier.length > 1 ? "s" : ""} {missingEarlier.join(", ")} first, so leagues score in order.
+                </p>
+              )}
+
               <div className="flex flex-wrap gap-3">
-                <Button variant="accent" className="h-11" onClick={() => doSave(true)} disabled={saving || blocking}>
+                <Button
+                  variant="accent"
+                  className="h-11"
+                  onClick={() => doSave(true)}
+                  disabled={saving || blocking || missingEarlier.length > 0}
+                >
                   {isPublished ? "Save changes (stays live)" : "Publish to commissioners"}
                 </Button>
                 {!isPublished && (
@@ -339,14 +411,22 @@ export function EpisodeResultsManager() {
                   </Button>
                 )}
                 {isPublished && (
-                  <Button variant="ghost" className="h-11" onClick={() => doSave(false)} disabled={saving}>
+                  <Button
+                    variant="ghost"
+                    className="h-11"
+                    onClick={() => {
+                      if (window.confirm(`Unpublish episode ${episode}? Leagues that haven't applied it yet won't see it until you publish again.`)) doSave(false);
+                    }}
+                    disabled={saving || laterLive}
+                    title={laterLive ? "Unpublish later episodes first" : undefined}
+                  >
                     Unpublish
                   </Button>
                 )}
               </div>
               {isPublished && (
                 <p className="text-xs text-muted-foreground">
-                  Leagues that already applied this episode won't get later edits. Fix those by hand in the league.
+                  Leagues that already applied this episode keep what they got; they can undo and re-apply from their card.
                 </p>
               )}
             </>
@@ -365,15 +445,11 @@ export function EpisodeResultsManager() {
             <ul className="divide-y divide-border">
               {results.map((r) => (
                 <li key={r.episode} className="py-2.5 flex flex-wrap items-center justify-between gap-3 min-h-[44px]">
-                  <button
-                    type="button"
-                    onClick={() => setEpisode(r.episode)}
-                    className="text-left min-w-0 hover:underline"
-                  >
+                  <button type="button" onClick={() => goToEpisode(r.episode)} className="text-left min-w-0 hover:underline">
                     <span className="font-bold tabular">Episode {r.episode}</span>
                     <span className="text-sm text-muted-foreground">
                       {" "}
-                      · Out: {[...r.voted_out, ...r.quit].join(", ") || "nobody"}
+                      · Out: {[...r.voted_out, ...r.quit, ...(r.left_game || [])].join(", ") || "nobody"}
                       {r.immunity.length ? ` · Immunity: ${r.immunity.join(", ")}` : ""}
                       {r.post_merge ? " · post-merge" : ""}
                     </span>
