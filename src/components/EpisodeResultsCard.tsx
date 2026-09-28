@@ -321,6 +321,9 @@ export function EpisodeResultsCard({
             {plan.unmatchedOther.length > 0 && (
               <p>Not in your league's cast: {plan.unmatchedOther.join(", ")}. Add those by hand if needed.</p>
             )}
+            {results.find((r) => r.episode === plan.episode)?.source === "auto" && (
+              <p>Filled in automatically from the Survivor Wiki and Wikipedia.</p>
+            )}
             <p>Cries, Jeff tosses, idols and bonuses stay manual. You can undo this afterward.</p>
           </div>
 

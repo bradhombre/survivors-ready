@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Clapperboard, AlertTriangle } from "lucide-react";
+import { Clapperboard, AlertTriangle, RefreshCw, Bot } from "lucide-react";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminEpisodeResults } from "@/hooks/useEpisodeResults";
@@ -97,6 +97,74 @@ function CastPicker({
   );
 }
 
+type SyncRun = { id: number; ran_at: string; ok: boolean; summary: string | null };
+
+/** The hourly wiki job: recent runs and a "check now" button. */
+function AutoResultsPanel({ onChecked }: { onChecked: () => void }) {
+  const [runs, setRuns] = useState<SyncRun[]>([]);
+  const [checking, setChecking] = useState(false);
+  const load = async () => {
+    const { data } = await (supabase as unknown as { from: (t: string) => any })
+      .from("episode_sync_log")
+      .select("id, ran_at, ok, summary")
+      .order("ran_at", { ascending: false })
+      .limit(5);
+    setRuns((data as SyncRun[]) || []);
+  };
+  useEffect(() => {
+    load();
+  }, []);
+  const checkNow = async () => {
+    setChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-episode-results", { body: { force: true } });
+      if (error) throw error;
+      toast.success((data as { summary?: string })?.summary || "Checked the wikis");
+      await load();
+      onChecked();
+    } catch (err: any) {
+      toast.error(`Couldn't check the wikis: ${err?.message || "try again"}`);
+    } finally {
+      setChecking(false);
+    }
+  };
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Bot className="h-5 w-5 text-muted-foreground" />
+          Automatic results
+        </CardTitle>
+        <CardDescription>
+          Every hour the site reads the Survivor Wiki and Wikipedia. It publishes an episode on its own when both
+          agree for 2 hours, or when the Survivor Wiki has been steady for 6 hours and Wikipedia hasn't caught up yet.
+          It never publishes before the West Coast airing ends. If the wikis disagree, it waits and emails you.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Button variant="outline" className="h-11 gap-2" onClick={checkNow} disabled={checking}>
+          <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} />
+          {checking ? "Checking…" : "Check the wikis now"}
+        </Button>
+        {runs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No checks yet.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {runs.map((r) => (
+              <li key={r.id} className="py-2 text-sm flex gap-3">
+                <span className="shrink-0 w-24 text-muted-foreground tabular">{fmt(r.ran_at)}</span>
+                <span className={r.ok ? "" : "text-destructive font-semibold"}>{r.summary || (r.ok ? "Checked" : "Failed")}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /**
  * Site admin > Episodes. The site owner enters each episode's big facts once; commissioners
  * then get an "Episode N results are in" card with one Apply tap.
@@ -114,7 +182,7 @@ export function EpisodeResultsManager() {
     }
   }, [currentSeason, season]);
 
-  const { results: rawResults, resultsSeason, loading, error, save } = useAdminEpisodeResults(season);
+  const { results: rawResults, resultsSeason, loading, error, save, refresh } = useAdminEpisodeResults(season);
   // Never use results that belong to a different season than the one on screen
   const results = useMemo(() => (resultsSeason === season ? rawResults : []), [resultsSeason, season, rawResults]);
   const [cast, setCast] = useState<CastRow[]>([]);
@@ -240,6 +308,7 @@ export function EpisodeResultsManager() {
 
   return (
     <div className="space-y-6">
+      <AutoResultsPanel onChecked={refresh} />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -247,7 +316,8 @@ export function EpisodeResultsManager() {
             Episode results
           </CardTitle>
           <CardDescription>
-            Enter each episode once after it airs. When you publish, the commissioner of every drafted full-fantasy
+            Results normally fill in automatically (above). Use this to check them, fix them, or enter an episode by hand.
+            When an episode is published, the commissioner of every drafted full-fantasy
             league on Season {season} gets an "Episode results are in" card, and one tap adds voted out, survival,
             immunity, jury and finale points. Cries, Jeff tosses, idols and bonuses stay with commissioners.
           </CardDescription>
@@ -452,6 +522,7 @@ export function EpisodeResultsManager() {
                       · Out: {[...r.voted_out, ...r.quit, ...(r.left_game || [])].join(", ") || "nobody"}
                       {r.immunity.length ? ` · Immunity: ${r.immunity.join(", ")}` : ""}
                       {r.post_merge ? " · post-merge" : ""}
+                      {r.source === "auto" ? ` · automatic${r.auto_note ? ` (${r.auto_note})` : ""}` : ""}
                     </span>
                   </button>
                   <span

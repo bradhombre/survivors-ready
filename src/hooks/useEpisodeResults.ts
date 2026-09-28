@@ -97,6 +97,8 @@ export function useAdminEpisodeResults(season: number | undefined) {
         winner: row.winner || null,
         updated_at: new Date().toISOString(),
         updated_by: userId ?? null,
+        // Anything saved here is the site owner's call, even if the wiki job filled it in first
+        source: "manual",
       };
       if (publish === true) {
         payload.status = "published";

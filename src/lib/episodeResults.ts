@@ -22,6 +22,9 @@ export type EpisodeResult = {
   status?: "draft" | "published";
   published_at?: string | null;
   updated_at?: string;
+  /** "auto" when the wiki job published it */
+  source?: "manual" | "auto";
+  auto_note?: string | null;
 };
 
 /** Not a configurable scoring action: 0 points, only records that a castaway left. */
