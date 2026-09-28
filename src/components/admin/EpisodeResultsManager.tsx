@@ -116,7 +116,7 @@ export function EpisodeResultsManager() {
 
   const { results: rawResults, resultsSeason, loading, error, save } = useAdminEpisodeResults(season);
   // Never use results that belong to a different season than the one on screen
-  const results = resultsSeason === season ? rawResults : [];
+  const results = useMemo(() => (resultsSeason === season ? rawResults : []), [resultsSeason, season, rawResults]);
   const [cast, setCast] = useState<CastRow[]>([]);
   const [episode, setEpisode] = useState<number>(1);
   const [form, setForm] = useState<EpisodeResult | null>(null);
