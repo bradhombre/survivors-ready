@@ -16,10 +16,12 @@ import {
   askIfEpisodeCounts,
   buildEpisodePlan,
   nextPendingEpisode,
+  pendingEpisodes,
   pointsByTeam,
   type ActionKey,
 } from "@/lib/episodeResults";
 import { useLeagueEpisodeResults } from "@/hooks/useEpisodeResults";
+import { StartEpisodePicker, skippedRun, undoSkippedRun } from "@/components/StartEpisodePicker";
 
 /** "Aubry ×2, Joe ×2" (the finale gives finalists two survival rounds) */
 const namesWithCounts = (names: string[]) =>
@@ -108,22 +110,28 @@ export function EpisodeResultsCard({
   const firstEpisodeForLeague = askIfEpisodeCounts({
     scoringEventCount: scoringEvents.length,
     applications: [...applications.values()],
-    publishedAt: results.find((r) => r.episode === next)?.published_at,
   });
+  // "We started with episode K" answers at the top, undone together
+  const run = skippedRun(applications);
 
   if (!ok) return null;
 
   const undo = async (episode: number) => {
     const wasSkipped = applications.get(episode)?.skipped;
+    // Undoing a "started after" answer undoes the whole answer (all the episodes it covered)
+    const eps = wasSkipped && run.some((a) => a.episode === episode) ? run.map((a) => a.episode) : [episode];
+    const span = eps.length === 1 ? `episode ${eps[0]}` : `episodes ${Math.min(...eps)}–${Math.max(...eps)}`;
     const question = wasSkipped
-      ? `Undo "we started after episode ${episode}"? It comes back so you can count it instead.`
+      ? `Undo "no points for ${span}"? ${eps.length === 1 ? "It comes" : "They come"} back so you can count ${eps.length === 1 ? "it" : "them"} or pick a different first episode.`
       : `Undo episode ${episode} auto-scoring? The points it added are removed and castaways it marked out come back.`;
     if (!window.confirm(question)) return;
     setBusy(true);
     try {
-      const n = await onUndo(episode);
+      let n = 0;
+      if (wasSkipped) await undoSkippedRun(run.filter((a) => eps.includes(a.episode)), onUndo);
+      else n = await onUndo(episode);
       await refresh();
-      toast.success(wasSkipped ? `Episode ${episode} is back on the card` : `Episode ${episode} auto-scoring undone (${n} events removed)`);
+      toast.success(wasSkipped ? `${span[0].toUpperCase()}${span.slice(1)} ${eps.length === 1 ? "is" : "are"} back on the card` : `Episode ${episode} auto-scoring undone (${n} events removed)`);
     } catch (err: any) {
       toast.error(`Couldn't undo: ${err?.message || "try again"}`);
     } finally {
@@ -135,7 +143,9 @@ export function EpisodeResultsCard({
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 sm:px-6 text-sm text-muted-foreground border-t-2 border-border">
       <span className="tabular">
         {lastApplied.skipped
-          ? `Episode ${lastApplied.episode}: no points (your league started after it).`
+          ? run.length > 1
+            ? `Episodes ${Math.min(...run.map((a) => a.episode))}–${lastApplied.episode}: no points (your league started with episode ${lastApplied.episode + 1}).`
+            : `Episode ${lastApplied.episode}: no points (your league started after it).`
           : `Episode ${lastApplied.episode} was auto-scored (${lastApplied.events_added} events).`}
       </span>
       <button
@@ -167,6 +177,10 @@ export function EpisodeResultsCard({
       </div>
     );
   }
+
+  // A new league with several episodes waiting picks its first episode in one step
+  const pendingList = pendingEpisodes(results, handled);
+  const pickFirstEpisode = firstEpisodeForLeague && pendingList.length > 1;
 
   const grouped = GROUPS.map((g) => ({ ...g, events: plan.events.filter((e) => e.key === g.key) })).filter(
     (g) => g.events.length > 0
@@ -243,13 +257,31 @@ export function EpisodeResultsCard({
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
             Auto-scoring
           </p>
-          <h2 className="font-display text-3xl leading-none mt-1">Episode {plan.episode} results are in</h2>
+          <h2 className="font-display text-3xl leading-none mt-1">
+            {pickFirstEpisode ? `Episodes ${plan.episode}–${pendingList[pendingList.length - 1]} results are in` : `Episode ${plan.episode} results are in`}
+          </h2>
           <p className="mt-2 text-sm text-header-label max-w-[60ch]">
-            {firstEpisodeForLeague
+            {pickFirstEpisode
+              ? "Which episode did your league start with? Episodes before it get no points; whoever went home in them is marked out. From your first episode on, you review and count each one."
+              : firstEpisodeForLeague
               ? `Did your league start before episode ${plan.episode} aired? Count it and your teams get its points. Started after? Just mark who went home, no points.`
               : "Voted out, survival points and immunity, ready to add in one tap. Review first; the details are spoilers."}
           </p>
         </div>
+        {pickFirstEpisode ? (
+          <div className="px-5 py-4 sm:px-6">
+            <StartEpisodePicker
+              results={results}
+              handled={handled}
+              contestants={contestants}
+              scoringEvents={scoringEvents}
+              scoringConfig={scoringConfig}
+              onApply={onApply}
+              refresh={refresh}
+              onCountFirst={() => setOpen(true)}
+            />
+          </div>
+        ) : (
         <div className="flex flex-wrap items-center gap-3 px-5 py-3 sm:px-6">
           <Button variant="accent" className="h-11" onClick={() => setOpen(true)}>
             {firstEpisodeForLeague ? `Count episode ${plan.episode}` : "Review and apply"}
@@ -265,6 +297,7 @@ export function EpisodeResultsCard({
             </span>
           )}
         </div>
+        )}
         {undoLine}
       </section>
 

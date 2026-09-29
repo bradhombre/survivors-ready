@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getPicksPerTeam } from "@/lib/picksPerTeam";
+import { draftPoolSize, getPicksPerTeam } from "@/lib/picksPerTeam";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -350,10 +350,12 @@ export const SetupMode = ({
 
   const teamCount = teams.length || 1;
   // Use a passed gameType or default to "full" for picks calculation
-  const computedPicks = getPicksPerTeam(explicitPicks, "full", contestants.length, teamCount);
+  // Castaways who went home before the league's first episode don't count toward the draft
+  const poolSize = draftPoolSize(contestants);
+  const computedPicks = getPicksPerTeam(explicitPicks, "full", poolSize, teamCount);
   const minContestants = computedPicks * teamCount;
-  const canStartDraft = contestants.length >= minContestants && !contestants.some((c) => c.owner);
-  const suggestedPicks = teamCount > 0 ? Math.max(1, Math.floor(contestants.length / teamCount)) : 1;
+  const canStartDraft = poolSize >= minContestants && !contestants.some((c) => c.owner);
+  const suggestedPicks = teamCount > 0 ? Math.max(1, Math.floor(poolSize / teamCount)) : 1;
 
   // Import official cast from master_contestants table
   const handleImportOfficialCast = async () => {
@@ -753,13 +755,13 @@ export const SetupMode = ({
           <div className="space-y-2">
             <Label className="label-caps text-muted-foreground">Picks per team</Label>
             <p className="text-xs text-muted-foreground tabular">
-              Suggested: {suggestedPicks} ({contestants.length} contestants / {teamCount} teams)
+              Suggested: {suggestedPicks} ({poolSize} contestants / {teamCount} teams)
             </p>
             <div className="flex items-center gap-3">
               <Input
                 type="number"
                 min={1}
-                max={contestants.length || 20}
+                max={poolSize || 20}
                 value={explicitPicks ?? suggestedPicks}
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
@@ -1007,9 +1009,9 @@ export const SetupMode = ({
           size="lg"
         >
           <Play className="mr-2 h-6 w-6" />
-          {contestants.length >= minContestants
-            ? `Start draft (${contestants.length} contestants ready)`
-            : `Start draft (${contestants.length}/${minContestants} contestants added)`}
+          {poolSize >= minContestants
+            ? `Start draft (${poolSize} contestants ready)`
+            : `Start draft (${poolSize}/${minContestants} contestants added)`}
         </Button>
         {!canStartDraft && (
           <p className="text-center text-sm text-muted-foreground mt-3 tabular">

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Player, Contestant, DraftType, GameType } from "@/types/survivor";
-import { getPicksPerTeam } from "@/lib/picksPerTeam";
+import { draftPoolSize, getPicksPerTeam } from "@/lib/picksPerTeam";
 import { ArrowRight, Undo2, Settings2 } from "lucide-react";
 import { useLeagueTeams } from "@/hooks/useLeagueTeams";
 import { useLeagueRole } from "@/hooks/useLeagueRole";
@@ -62,9 +62,11 @@ export const DraftMode = ({
     return map;
   }, [teams]);
   const teamCount = draftOrder.length;
-  const picksPerTeam = getPicksPerTeam(explicitPicks, gameType, contestants.length, teamCount);
+  const picksPerTeam = getPicksPerTeam(explicitPicks, gameType, draftPoolSize(contestants), teamCount);
   const totalPicks = teamCount * picksPerTeam;
-  const availableContestants = contestants.filter((c) => !c.owner);
+  // Castaways who went home before this league's first episode aren't in the draft
+  const availableContestants = contestants.filter((c) => !c.owner && !c.isEliminated);
+  const goneBeforeDraft = contestants.filter((c) => !c.owner && c.isEliminated).length;
   const draftedContestants = contestants.filter((c) => c.owner);
 
   const getCurrentDrafter = () => {
@@ -260,7 +262,7 @@ export const DraftMode = ({
       {/* Manual Assignment Mode */}
       {manualMode && onManualAssign && onManualFinalize ? (
         <ManualAssignment
-          contestants={contestants}
+          contestants={contestants.filter((c) => !!c.owner || !c.isEliminated)}
           draftOrder={draftOrder}
           picksPerTeam={picksPerTeam}
           onAssign={onManualAssign}
@@ -275,6 +277,12 @@ export const DraftMode = ({
             <h2 className="font-display text-3xl leading-none">Available castaways</h2>
             <span className="label-caps text-muted-foreground tabular">{availableContestants.length} left</span>
           </div>
+          {goneBeforeDraft > 0 && (
+            <p className="text-sm text-muted-foreground tabular">
+              {goneBeforeDraft} castaway{goneBeforeDraft === 1 ? "" : "s"} who went home before your league's first episode{" "}
+              {goneBeforeDraft === 1 ? "isn't" : "aren't"} in the draft.
+            </p>
+          )}
 
           {availableContestants.length === 0 && contestants.length === 0 ? (
             <div className="text-center py-8 space-y-2">

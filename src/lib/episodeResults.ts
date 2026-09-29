@@ -277,18 +277,49 @@ export function nextPendingEpisode(published: EpisodeResult[], handled: Set<numb
 }
 
 /**
- * Should the card ask "did your league start before this episode?" Yes while the league has
- * scored nothing (by hand or automatically). After "we started after episode 1", the next
- * episode is only asked about if it was already out when they said so (they joined even later).
+ * Should the card ask "which episode did your league start with?" Only until the league has
+ * answered (any episode applied or marked "started after") and while it has scored nothing.
  */
-export function askIfEpisodeCounts(args: {
-  scoringEventCount: number;
-  applications: { skipped: boolean; applied_at: string }[];
-  publishedAt?: string | null;
+export function askIfEpisodeCounts(args: { scoringEventCount: number; applications: unknown[] }) {
+  return args.scoringEventCount === 0 && args.applications.length === 0;
+}
+
+/**
+ * Published episodes a league hasn't handled yet, in order, stopping at the first gap (a gap
+ * means results are being fixed).
+ */
+export function pendingEpisodes(published: EpisodeResult[], handled: Set<number>): number[] {
+  const eps = [...new Set(published.map((r) => r.episode))].sort((a, b) => a - b);
+  if (!eps.length) return [];
+  const out: number[] = [];
+  for (let e = eps[0]; eps.includes(e); e++) if (!handled.has(e)) out.push(e);
+  return out;
+}
+
+/**
+ * "Our league starts with episode K": for every waiting episode before K, who went home (marked
+ * out, no points). Names we can't match to the league's cast come back in `unmatchedExits` and
+ * must be picked (or marked "not in my league") via `overrides` first.
+ */
+export function planStartedAfter(args: {
+  published: EpisodeResult[];
+  handled: Set<number>;
+  startEpisode: number;
+  contestants: Contestant[];
+  scoringEvents: ScoringEvent[];
+  scoringConfig: ScoringConfig | null | undefined;
+  overrides?: Record<string, string>;
 }) {
-  const { scoringEventCount, applications, publishedAt } = args;
-  if (scoringEventCount > 0 || applications.some((a) => !a.skipped)) return false;
-  const lastSkipAt = Math.max(0, ...applications.filter((a) => a.skipped).map((a) => Date.parse(a.applied_at) || 0));
-  const published = Date.parse(publishedAt || "") || 0;
-  return lastSkipAt === 0 || published === 0 || published <= lastSkipAt;
+  const { published, handled, startEpisode, contestants, scoringEvents, scoringConfig, overrides = {} } = args;
+  const steps: { episode: number; eliminate: string[]; postMerge: boolean }[] = [];
+  const unmatchedExits = new Set<string>();
+  const skipped = new Set<number>(); // episodes marked "started after" in this same answer
+  for (const episode of pendingEpisodes(published, handled).filter((e) => e < startEpisode)) {
+    const plan = buildEpisodePlan({ published, episode, contestants, scoringEvents, scoringConfig, overrides, skipped });
+    if (!plan) continue;
+    plan.unmatchedExits.forEach((n) => unmatchedExits.add(n));
+    steps.push({ episode, eliminate: plan.eliminate, postMerge: plan.postMerge });
+    skipped.add(episode);
+  }
+  return { steps, unmatchedExits: [...unmatchedExits], goingHome: steps.reduce((n, s) => n + s.eliminate.length, 0) };
 }

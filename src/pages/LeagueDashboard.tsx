@@ -14,7 +14,8 @@ import { CommissionerChecklist } from "@/components/CommissionerChecklist";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { GameplayTips } from "@/components/GameplayTips";
 import { EpisodeResultsCard } from "@/components/EpisodeResultsCard";
-import { getPicksPerTeam } from "@/lib/picksPerTeam";
+import { draftPoolSize, getPicksPerTeam } from "@/lib/picksPerTeam";
+import { LateStartCard } from "@/components/StartEpisodePicker";
 import { LeagueInfo } from "@/components/LeagueInfo";
 import { SeasonCompleteBanner, NewSeasonDialog } from "@/components/SeasonCompleteBanner";
 import { Lockup } from "@/components/Lockup";
@@ -138,9 +139,9 @@ const LeagueDashboard = () => {
 
 
   // Determine draft/game state (must be before early returns for hooks)
-  const computedPicksPerTeam = getPicksPerTeam(state.picksPerTeam, state.gameType, state.contestants.length, state.draftOrder.length);
+  const computedPicksPerTeam = getPicksPerTeam(state.picksPerTeam, state.gameType, draftPoolSize(state.contestants), state.draftOrder.length);
   const totalPicks = state.draftOrder.length * computedPicksPerTeam;
-  const isInDraftPhase = state.mode === "draft" || (state.mode === "setup" && state.contestants.length >= (state.gameType === "winner_takes_all" ? 1 : computedPicksPerTeam * state.draftOrder.length));
+  const isInDraftPhase = state.mode === "draft" || (state.mode === "setup" && draftPoolSize(state.contestants) >= (state.gameType === "winner_takes_all" ? 1 : computedPicksPerTeam * state.draftOrder.length));
   const canShowGame = totalPicks > 0 && state.currentDraftIndex >= totalPicks;
 
   // Set default viewMode based on game state
@@ -244,9 +245,9 @@ const LeagueDashboard = () => {
   }
 
   const handleStartDraft = () => {
-    const ppt = getPicksPerTeam(state.picksPerTeam, state.gameType, state.contestants.length, state.draftOrder.length);
+    const ppt = getPicksPerTeam(state.picksPerTeam, state.gameType, draftPoolSize(state.contestants), state.draftOrder.length);
     const minContestants = ppt * state.draftOrder.length;
-    if (state.contestants.length >= minContestants && !state.contestants.some((c) => c.owner)) {
+    if (draftPoolSize(state.contestants) >= minContestants && !state.contestants.some((c) => c.owner)) {
       setMode("draft");
       trackEvent('draft_started', {
         league_name: leagueName,
@@ -256,7 +257,7 @@ const LeagueDashboard = () => {
   };
 
   const handleStartGame = async () => {
-    const ppt = getPicksPerTeam(state.picksPerTeam, state.gameType, state.contestants.length, state.draftOrder.length);
+    const ppt = getPicksPerTeam(state.picksPerTeam, state.gameType, draftPoolSize(state.contestants), state.draftOrder.length);
     const totalPicksCalc = state.draftOrder.length * ppt;
     if (state.currentDraftIndex >= totalPicksCalc) {
       // Ensure game starts in pre-merge state
@@ -403,6 +404,18 @@ const LeagueDashboard = () => {
       {/* Draft Tab */}
       {viewMode === "draft" && !canShowGame && (
         <>
+          {/* Starting mid-season: take castaways who already went home out of the draft */}
+          {leagueRole === "league_admin" && state.gameType !== "winner_takes_all" && (
+            <LateStartCard
+              season={state.season}
+              sessionId={sessionId || undefined}
+              contestants={state.contestants}
+              scoringEvents={state.scoringEvents}
+              scoringConfig={scoringConfig}
+              onApply={applyEpisodeResults}
+              onUndo={undoEpisodeResults}
+            />
+          )}
           {isLeagueAdmin && state.contestants.some(c => c.owner) && (
             <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
               <div className="flex flex-wrap items-center gap-3 rounded-[12px] border-2 border-accent bg-accent/10 px-4 py-3">

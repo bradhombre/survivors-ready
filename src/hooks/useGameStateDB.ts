@@ -586,8 +586,8 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
       const currentDraftIndex = freshSession.current_draft_index;
       const { draftOrder, draftType, gameType, picksPerTeam: explicitPicks } = state;
       const teamCount = draftOrder.length;
-      const { getPicksPerTeam } = await import("@/lib/picksPerTeam");
-      const picksPerTeam = getPicksPerTeam(explicitPicks, gameType, state.contestants.length, teamCount);
+      const { draftPoolSize, getPicksPerTeam } = await import("@/lib/picksPerTeam");
+      const picksPerTeam = getPicksPerTeam(explicitPicks, gameType, draftPoolSize(state.contestants), teamCount);
       const totalPicks = teamCount * picksPerTeam;
 
       if (currentDraftIndex >= totalPicks || teamCount === 0) return;
