@@ -99,8 +99,19 @@ export function buildEpisodePlan(args: {
   overrides?: Record<string, string>;
   /** Episodes this league took no points for (it started after they aired) */
   skipped?: Set<number>;
+  /** Scoring events that auto-scoring added (for other episodes). Hand-entered ones are everything else. */
+  autoEventIds?: Set<string>;
 }): EpisodePlan | null {
-  const { published, episode, contestants, scoringEvents, scoringConfig, overrides = {}, skipped = new Set<number>() } = args;
+  const {
+    published,
+    episode,
+    contestants,
+    scoringEvents,
+    scoringConfig,
+    overrides = {},
+    skipped = new Set<number>(),
+    autoEventIds = new Set<string>(),
+  } = args;
   const result = published.find((r) => r.episode === episode);
   if (!result) return null;
 
@@ -173,7 +184,20 @@ export function buildEpisodePlan(args: {
   }
 
   const owned = contestants.filter((c) => !!c.owner);
-  const stillInAfter = (c: Contestant) => !c.isEliminated && !leftBefore.has(c.id) && !leftThisEpisode.has(c.id);
+  // In the game after this episode? Someone already marked out may have left LATER (the
+  // commissioner entered a newer boot by hand first), so check the published results and their
+  // exit event's episode before trusting the "out" flag.
+  const leftLater = new Set<string>();
+  for (const r of published) {
+    if (r.episode > episode) resolve([...r.voted_out, ...r.quit, ...(r.left_game || [])]).forEach((c) => leftLater.add(c.id));
+  }
+  const exitKeys: ActionKey[] = ["VOTED_OUT", "QUIT", "MEDEVAC", "VOTED_OUT_WITH_IDOL"];
+  const stillInAfter = (c: Contestant) => {
+    if (leftBefore.has(c.id) || leftThisEpisode.has(c.id)) return false;
+    if (!c.isEliminated || leftLater.has(c.id)) return true;
+    const exits = eventsFor(c).filter((e) => exitKeys.some((k) => isAction(e, k)));
+    return exits.length > 0 && Math.min(...exits.map((e) => e.episode)) > episode;
+  };
 
   // Survived the episode. The finale is really two episodes, so the finalists (final two or
   // three) get two survival rounds for it. Rounds are skipped when already entered by hand for
@@ -189,27 +213,36 @@ export function buildEpisodePlan(args: {
       if (isFinale && finalistIds.size > 0 && !finalistIds.has(c.id)) continue;
       const surv = eventsFor(c).filter(isSurvive);
       const thisEpisode = surv.filter((e) => e.episode === episode).length;
-      const ahead = surv.some((e) => e.episode > episode);
+      // Hand-entered survival for a later episode = this league's numbering runs ahead. Auto-scored
+      // later episodes don't count (an older episode being re-applied after a correction).
+      const ahead = surv.some((e) => e.episode > episode && !autoEventIds.has(e.id));
+      const soFar = surv.filter((e) => e.episode <= episode).length;
       const target = episode - skippedBefore + (rounds - 1); // survival rounds owed through this episode
-      const needed = ahead ? 0 : Math.max(0, Math.min(rounds - thisEpisode, target - surv.length));
+      const needed = ahead ? 0 : Math.max(0, Math.min(rounds - thisEpisode, target - soFar));
       alreadyEntered += rounds - needed;
       for (let i = 0; i < needed; i++) add(c, surviveKey);
     }
   }
 
   // Individual immunity: once per challenge won (a finale can have two for the same castaway).
-  // Wins already entered by hand for this episode are subtracted.
+  // Like survival, it's counted two ways so nothing is added twice: wins already entered for this
+  // episode, and wins entered in total so far (a win typed in under the previous episode number).
   if (isActionEnabled("WIN_IMMUNITY", scoringConfig)) {
-    const entered = new Map<string, number>();
-    for (const c of immunity) {
+    const winsThrough = new Map<string, number>();
+    for (const r of published) {
+      if (r.episode > episode || skipped.has(r.episode)) continue;
+      for (const c of resolve(r.immunity)) winsThrough.set(c.id, (winsThrough.get(c.id) || 0) + 1);
+    }
+    const winners = new Map<string, { c: Contestant; wins: number }>();
+    for (const c of immunity) winners.set(c.id, { c, wins: (winners.get(c.id)?.wins || 0) + 1 });
+    for (const { c, wins } of winners.values()) {
       if (!c.owner) continue;
-      if (!entered.has(c.id))
-        entered.set(c.id, eventsFor(c).filter((e) => e.episode === episode && isAction(e, "WIN_IMMUNITY")).length);
-      const left = entered.get(c.id)!;
-      if (left > 0) {
-        entered.set(c.id, left - 1);
-        alreadyEntered++;
-      } else add(c, "WIN_IMMUNITY");
+      const imm = eventsFor(c).filter((e) => isAction(e, "WIN_IMMUNITY"));
+      const enteredThis = imm.filter((e) => e.episode === episode).length;
+      const enteredSoFar = imm.filter((e) => e.episode <= episode).length;
+      const needed = Math.max(0, Math.min(wins - enteredThis, (winsThrough.get(c.id) || 0) - enteredSoFar));
+      alreadyEntered += wins - needed;
+      for (let i = 0; i < needed; i++) add(c, "WIN_IMMUNITY");
     }
   }
 
@@ -277,11 +310,22 @@ export function nextPendingEpisode(published: EpisodeResult[], handled: Set<numb
 }
 
 /**
- * Should the card ask "which episode did your league start with?" Only until the league has
- * answered (any episode applied or marked "started after") and while it has scored nothing.
+ * Should the card ask "which episode did your league start with?" Yes until the league has
+ * counted an episode through the card, even if it scored some by hand (a late-starting league
+ * may have typed in its first real episode as "Episode 1"). After a "we started after" answer,
+ * an episode is only asked about if it was already out when they answered (they're still
+ * answering, or the answer didn't finish); newer episodes get the normal card.
  */
-export function askIfEpisodeCounts(args: { scoringEventCount: number; applications: unknown[] }) {
-  return args.scoringEventCount === 0 && args.applications.length === 0;
+export function askIfEpisodeCounts(args: {
+  applications: { skipped: boolean; applied_at: string }[];
+  publishedAt?: string | null;
+}) {
+  const { applications, publishedAt } = args;
+  if (applications.some((a) => !a.skipped)) return false;
+  const lastSkipAt = Math.max(0, ...applications.map((a) => Date.parse(a.applied_at) || 0));
+  if (lastSkipAt === 0) return true;
+  const published = Date.parse(publishedAt || "") || 0;
+  return published === 0 || published <= lastSkipAt;
 }
 
 /**

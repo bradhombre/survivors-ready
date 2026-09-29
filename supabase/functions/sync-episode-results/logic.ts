@@ -37,6 +37,8 @@ export type SourceFacts = {
   episodes: Map<number, EpisodeFacts>;
   /** Episodes this source listed but that failed validation, with the reason */
   problems: Map<number, string>;
+  /** Episodes listed with nobody leaving (usually a row not filled in yet), with the air date */
+  empty: Map<number, string | null>;
 };
 
 export const CONFIG = {
@@ -44,8 +46,11 @@ export const CONFIG = {
   agreeStableHours: 2,
   /** Wikipedia often lags by days. If it has nothing yet (it doesn't disagree), the Survivor Wiki alone must be unchanged this long */
   wikiAloneStableHours: 6,
-  /** Never publish before this many hours after 00:00 UTC on the day after the air date (05:00 UTC = after the West Coast airing) */
-  hoursAfterAirDay: 29,
+  /** Never publish before this many hours after 00:00 UTC on the air date. 32 = 08:00 UTC the next
+   *  day: midnight Pacific in winter, after even a 3-hour finale ends on the West Coast. */
+  hoursAfterAirDay: 32,
+  /** An episode the wikis show with nobody leaving goes to you for review after this many more hours */
+  emptyReviewHours: 48,
 };
 
 export const normalizeName = (s: string) =>
@@ -124,17 +129,24 @@ export function validateSource(source: SourceName, raw: RawEpisode[], castNames:
   const byNorm = new Map(castNames.map((n) => [normalizeName(n), n]));
   const episodes = new Map<number, EpisodeFacts>();
   const problems = new Map<number, string>();
-  const sorted = [...raw].filter((r) => Number.isInteger(r?.episode) && r.episode >= 1).sort((a, b) => a.episode - b.episode);
+  const empty = new Map<number, string | null>();
+  // The AI's answer is untrusted: anything that isn't a list of names is treated as a list
+  const list = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" && v.trim() ? [v] : [];
+  const sorted = [...(Array.isArray(raw) ? raw : [])]
+    .filter((r) => r && typeof r === "object" && Number.isInteger(r.episode) && r.episode >= 1)
+    .sort((a, b) => a.episode - b.episode);
   const gone = new Set<string>();
   // Nothing counts after the finale (the Survivor Wiki lists the reunion/aftershow as the next episode)
   const finale = sorted.find((r) => typeof r.winner === "string" && r.winner.trim());
+  const uncertainOf = (r: RawEpisode) => list(r.uncertain);
 
   for (const r of sorted) {
     if (finale && r.episode > finale.episode) break;
     const bad: string[] = [];
-    const fix = (list: string[] | undefined) =>
-      (list || [])
-        .filter((n) => typeof n === "string" && n.trim())
+    const fix = (names: unknown) =>
+      list(names)
+        .filter((n) => n.trim())
         .map((n) => {
           const official = byNorm.get(normalizeName(n));
           if (!official) bad.push(`"${n}" isn't in the official cast`);
@@ -150,10 +162,17 @@ export function validateSource(source: SourceName, raw: RawEpisode[], castNames:
       post_merge: !!r.merged,
       jury_starts: !!r.first_juror_voted_out,
       final_tribal: fix(r.final_tribal),
-      winner: r.winner ? fix([r.winner])[0] : null,
+      winner: typeof r.winner === "string" && r.winner.trim() ? fix([r.winner])[0] : null,
     };
-    if (r.uncertain && r.uncertain.length) bad.push(`marked uncertain: ${r.uncertain.join("; ")}`);
+    const unsure = uncertainOf(r);
+    if (unsure.length) bad.push(`marked uncertain: ${unsure.join("; ")}`);
     const exits = [...f.voted_out, ...f.quit, ...f.left_game];
+    // Nobody left and it isn't the finale: almost always a row that isn't filled in yet. Never
+    // published automatically (decide() sends it to you if it stays that way).
+    if (!bad.length && exits.length === 0 && !f.final_tribal.length && !f.winner) {
+      empty.set(r.episode, f.air_date);
+      continue;
+    }
     if (new Set(exits).size !== exits.length) bad.push("someone is listed as leaving twice");
     for (const n of exits) if (gone.has(n)) bad.push(`${n} already left in an earlier episode`);
     for (const n of [...f.immunity, ...f.final_tribal, ...(f.winner ? [f.winner] : [])])
@@ -169,7 +188,7 @@ export function validateSource(source: SourceName, raw: RawEpisode[], castNames:
     else episodes.set(r.episode, f);
     exits.forEach((n) => gone.add(n));
   }
-  return { source, episodes, problems };
+  return { source, episodes, problems, empty };
 }
 
 const sortedList = (a: string[]) => [...a].sort().join("|");
@@ -226,7 +245,14 @@ export function decide(args: {
     const wp = wikipedia?.episodes.get(ep) || null;
     if (!w) {
       const why = wiki.problems.get(ep);
+      const air = wiki.empty.get(ep);
       if (why) out.push({ episode: ep, action: "review", reason: `Survivor Wiki: ${why}` });
+      else if (air && now.getTime() >= Date.parse(`${air}T00:00:00Z`) + (cfg.hoursAfterAirDay + cfg.emptyReviewHours) * 3.6e6)
+        out.push({
+          episode: ep,
+          action: "review",
+          reason: "The Survivor Wiki still shows nobody leaving this episode, 2 days after it aired. If that's right, publish it by hand in Site admin.",
+        });
       break; // not there yet, or not usable
     }
     const airOk = w.air_date && now.getTime() >= Date.parse(`${w.air_date}T00:00:00Z`) + cfg.hoursAfterAirDay * 3.6e6;

@@ -83,33 +83,52 @@ export function EpisodeResultsCard({
     () => new Set([...applications.values()].filter((a) => a.skipped).map((a) => a.episode)),
     [applications]
   );
+  const autoEventIds = useMemo(
+    () => new Set([...applications.values()].flatMap((a) => a.event_ids || [])),
+    [applications]
+  );
   const { next, blocked, waiting } = useMemo(() => nextPendingEpisode(results, handled), [results, handled]);
 
-  // Picks for names we couldn't match belong to one episode
-  useEffect(() => setOverrides({}), [next]);
+  // Picks for names we couldn't match belong to one episode. If the episode on the card changes
+  // (another commissioner applied it), close the review so it never shows a different episode.
+  useEffect(() => {
+    setOverrides({});
+    setOpen(false);
+  }, [next]);
 
   const plan = useMemo(
     () =>
       next !== undefined
-        ? buildEpisodePlan({ published: results, episode: next, contestants, scoringEvents, scoringConfig, overrides, skipped })
+        ? buildEpisodePlan({ published: results, episode: next, contestants, scoringEvents, scoringConfig, overrides, skipped, autoEventIds })
         : null,
-    [next, results, contestants, scoringEvents, scoringConfig, overrides, skipped]
+    [next, results, contestants, scoringEvents, scoringConfig, overrides, skipped, autoEventIds]
   );
 
-  // Most recent episode handled here (scored, or "we started after it"), for the undo line (2 days)
+  // Most recent episode handled here (scored, marked done, or "we started after it"), for the undo line (2 days)
   const lastApplied = useMemo(() => {
     const recent = [...applications.values()]
-      .filter((a) => (a.skipped || a.events_added > 0) && Date.now() - Date.parse(a.applied_at) < 2 * 864e5)
+      .filter((a) => Date.now() - Date.parse(a.applied_at) < 2 * 864e5)
       .sort((a, b) => b.episode - a.episode);
     return recent[0];
   }, [applications]);
 
-  // A league that hasn't scored anything yet gets asked whether this episode counts. Lots of
-  // leagues draft after the premiere; some want those points, some don't. After "we started
-  // after episode 1", episode 2 is only asked about if it was already out when they said so.
+  // Results the site owner corrected after this league applied them (oldest first)
+  const corrected = useMemo(() => {
+    const eps = [...applications.values()]
+      .filter((a) => {
+        const r = results.find((x) => x.episode === a.episode);
+        return !a.skipped && r?.updated_at && Date.parse(r.updated_at) > Date.parse(a.applied_at);
+      })
+      .map((a) => a.episode)
+      .sort((a, b) => a - b);
+    return eps[0];
+  }, [applications, results]);
+
+  // Until the league counts an episode through the card, ask which episode it started with.
+  // Lots of leagues draft after the premiere; some want those points, some don't.
   const firstEpisodeForLeague = askIfEpisodeCounts({
-    scoringEventCount: scoringEvents.length,
     applications: [...applications.values()],
+    publishedAt: results.find((r) => r.episode === next)?.published_at,
   });
   // "We started with episode K" answers at the top, undone together
   const run = skippedRun(applications);
@@ -146,7 +165,9 @@ export function EpisodeResultsCard({
           ? run.length > 1
             ? `Episodes ${Math.min(...run.map((a) => a.episode))}–${lastApplied.episode}: no points (your league started with episode ${lastApplied.episode + 1}).`
             : `Episode ${lastApplied.episode}: no points (your league started after it).`
-          : `Episode ${lastApplied.episode} was auto-scored (${lastApplied.events_added} events).`}
+          : lastApplied.events_added > 0
+          ? `Episode ${lastApplied.episode} was auto-scored (${lastApplied.events_added} events).`
+          : `Episode ${lastApplied.episode} was marked done.`}
       </span>
       <button
         type="button"
@@ -160,7 +181,58 @@ export function EpisodeResultsCard({
     </div>
   );
 
+  // A correction reaches this league only when the commissioner says so: the episode (and any
+  // applied after it) comes back on the card to re-apply. Points added by hand stay.
+  const updateCorrected = async () => {
+    if (corrected === undefined) return;
+    const eps = [...applications.values()].filter((a) => a.episode >= corrected).map((a) => a.episode).sort((a, b) => b - a);
+    const span = eps.length === 1 ? `episode ${corrected}` : `episodes ${corrected}–${eps[0]}`;
+    if (
+      !window.confirm(
+        `Episode ${corrected}'s results were corrected. This removes the auto-scored points for ${span} and puts ${
+          eps.length === 1 ? "it" : "them"
+        } back on this card so you can apply the corrected results. Points you added by hand stay.`
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      for (const ep of eps) await onUndo(ep);
+      await refresh();
+      toast.success(`Episode ${corrected} is back on the card with the corrected results`);
+    } catch (err: any) {
+      await refresh();
+      toast.error(`Couldn't update: ${err?.message || "try again"}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const correctedLine = corrected !== undefined && !open && (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 sm:px-6 text-sm border-t-2 border-border">
+      <AlertTriangle className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+      <span>Episode {corrected}'s results were corrected after you applied them.</span>
+      <button
+        type="button"
+        onClick={updateCorrected}
+        disabled={busy}
+        className="inline-flex min-h-[40px] items-center font-bold underline underline-offset-2"
+      >
+        Update my league
+      </button>
+    </div>
+  );
+
   if (!plan) {
+    if (corrected !== undefined) {
+      return (
+        <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
+          <div className="plank overflow-hidden">
+            {correctedLine}
+            {undoLine}
+          </div>
+        </div>
+      );
+    }
     if (blocked) {
       return (
         <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
@@ -186,9 +258,15 @@ export function EpisodeResultsCard({
     (g) => g.events.length > 0
   );
   const teams = pointsByTeam(plan);
-  const needsPicks = plan.unmatchedExits.filter((n) => !(n in overrides));
+  // Every name we couldn't match needs a pick (or "not in my league") before applying
+  const unmatched = [...plan.unmatchedExits, ...plan.unmatchedOther];
+  const needsPicks = unmatched.filter((n) => !(n in overrides));
   const nothingToAdd = plan.events.length === 0 && plan.eliminate.length === 0;
-  const stillIn = contestants.filter((c) => !c.isEliminated).sort((a, b) => a.name.localeCompare(b.name));
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
+  const pickable = [
+    ...contestants.filter((c) => !c.isEliminated).sort(byName),
+    ...contestants.filter((c) => c.isEliminated).sort(byName),
+  ];
 
   const apply = async () => {
     setBusy(true);
@@ -298,6 +376,7 @@ export function EpisodeResultsCard({
           )}
         </div>
         )}
+        {correctedLine}
         {undoLine}
       </section>
 
@@ -322,13 +401,13 @@ export function EpisodeResultsCard({
             </div>
           )}
 
-          {plan.unmatchedExits.length > 0 && (
+          {unmatched.length > 0 && (
             <div className="space-y-3 rounded-[12px] border-2 border-accent bg-accent/10 p-3">
               <p className="text-sm font-bold">
-                We couldn't find {plan.unmatchedExits.length === 1 ? "this castaway" : "these castaways"} in your league's
-                cast. Pick who it is so they're marked out:
+                We couldn't find {unmatched.length === 1 ? "this name" : "these names"} in your league's cast. Pick who{" "}
+                {unmatched.length === 1 ? "it is" : "each one is"}, or "Not in my league":
               </p>
-              {plan.unmatchedExits.map((name, i) => (
+              {unmatched.map((name, i) => (
                 <div key={name} className="space-y-1">
                   <label htmlFor={`er-pick-${i}`} className="text-sm font-semibold">
                     {name}
@@ -344,9 +423,10 @@ export function EpisodeResultsCard({
                     <option value="" disabled>
                       Choose a castaway
                     </option>
-                    {stillIn.map((c) => (
+                    {pickable.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
+                        {c.isEliminated ? " (already out)" : ""}
                       </option>
                     ))}
                     <option value={NOT_IN_LEAGUE}>Not in my league</option>
@@ -401,9 +481,6 @@ export function EpisodeResultsCard({
             {plan.alreadyEntered > 0 && (
               <p className="tabular">{plan.alreadyEntered} already entered by hand, so they're skipped.</p>
             )}
-            {plan.unmatchedOther.length > 0 && (
-              <p>Not in your league's cast: {plan.unmatchedOther.join(", ")}. Add those by hand if needed.</p>
-            )}
             {results.find((r) => r.episode === plan.episode)?.source === "auto" && (
               <p>Filled in automatically from the Survivor Wiki and Wikipedia.</p>
             )}
@@ -411,14 +488,16 @@ export function EpisodeResultsCard({
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="ghost" className="h-11" onClick={skip} disabled={busy || needsPicks.length > 0}>
-              We started after this episode
-            </Button>
+            {firstEpisodeForLeague && (
+              <Button variant="ghost" className="h-11" onClick={skip} disabled={busy || needsPicks.length > 0}>
+                We started after this episode
+              </Button>
+            )}
             <Button variant="accent" className="h-11" onClick={apply} disabled={busy || needsPicks.length > 0}>
               {busy
                 ? "Adding…"
                 : needsPicks.length > 0
-                ? "Pick the castaway above"
+                ? "Pick the names above"
                 : nothingToAdd
                 ? "Mark as done"
                 : `Add ${plan.events.length} events`}

@@ -1011,6 +1011,8 @@ export const SetupMode = ({
           <Play className="mr-2 h-6 w-6" />
           {poolSize >= minContestants
             ? `Start draft (${poolSize} contestants ready)`
+            : poolSize < contestants.length
+            ? `Start draft (${poolSize} castaways left, ${minContestants} needed: lower picks per team)`
             : `Start draft (${poolSize}/${minContestants} contestants added)`}
         </Button>
         {!canStartDraft && (

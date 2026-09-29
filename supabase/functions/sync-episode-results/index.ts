@@ -9,6 +9,7 @@ import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supa
 import {
   CONFIG,
   decide,
+  type EpisodeFacts,
   factsKey,
   hashText,
   htmlTablesToText,
@@ -95,10 +96,12 @@ Rules:
   if (!out && Array.isArray(ai.output)) {
     for (const o of ai.output) for (const c of o.content || []) if (c.text) out += c.text;
   }
+  // No usable answer is an error (not "no episodes"), so it isn't saved and the next run asks again
   const m = out.match(/\{[\s\S]*\}/);
-  if (!m) return [];
+  if (!m) throw new Error("AI answer had no JSON");
   const parsed = JSON.parse(m[0]);
-  return Array.isArray(parsed?.episodes) ? (parsed.episodes as RawEpisode[]) : [];
+  if (!Array.isArray(parsed?.episodes)) throw new Error("AI answer had no episode list");
+  return parsed.episodes as RawEpisode[];
 }
 
 async function notifyOwner(
@@ -139,7 +142,7 @@ async function testSeason(supabase: SupabaseClient, season: number) {
   const notes: Record<string, string> = {};
   for (const source of sources) {
     try {
-      const text = htmlTablesToText(await fetchPageHtml(source, season)).slice(0, 30000);
+      const text = htmlTablesToText(await fetchPageHtml(source, season)).slice(0, 40000);
       const raw = await extractWithAI(source, season, castNames, text);
       facts[source] = validateSource(source, raw, castNames);
       notes[source] = `read ${raw.length} episodes`;
@@ -186,6 +189,12 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
   const started = new Date();
+  let runId: number | null = null;
+  // Finish this run's log row (or add one if the claim didn't go through)
+  const finishLog = async (row: { ok: boolean; summary: string; details: Record<string, unknown> }) => {
+    if (runId !== null) await supabase.from("episode_sync_log").update(row).eq("id", runId);
+    else await supabase.from("episode_sync_log").insert({ ran_at: started.toISOString(), ...row });
+  };
 
   try {
     // Who's asking? The hourly job sends the public key (no user); the site owner can force a run.
@@ -221,6 +230,13 @@ Deno.serve(async (req) => {
     if (!force && lastRun?.ran_at && started.getTime() - Date.parse(lastRun.ran_at) < THROTTLE_MINUTES * 60_000) {
       return json({ skipped: "ran recently" });
     }
+    // Claim this run right away, so a second call in the meantime hits the throttle above
+    const { data: claimed } = await supabase
+      .from("episode_sync_log")
+      .insert({ ran_at: started.toISOString(), ok: false, summary: "Checking the wikis…", details: {} })
+      .select("id")
+      .single();
+    runId = (claimed as { id: number } | null)?.id ?? null;
 
     const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "current_season").maybeSingle();
     const season = parseInt(String(setting?.value ?? "").match(/\d{1,4}/)?.[0] ?? "", 10);
@@ -237,7 +253,7 @@ Deno.serve(async (req) => {
     for (const source of sources) {
       try {
         const html = await fetchPageHtml(source, season);
-        const text = htmlTablesToText(html).slice(0, 30000);
+        const text = htmlTablesToText(html).slice(0, 40000);
         const contentHash = hashText(text);
         const { data: state } = await supabase
           .from("episode_sync_state")
@@ -263,7 +279,7 @@ Deno.serve(async (req) => {
       }
     }
     if (!facts.survivor_wiki) {
-      await supabase.from("episode_sync_log").insert({ ran_at: started.toISOString(), ok: false, summary: "Couldn't read the Survivor Wiki", details: { fetchNotes } });
+      await finishLog({ ok: false, summary: "Couldn't read the Survivor Wiki", details: { fetchNotes } });
       return json({ ok: false, fetchNotes });
     }
 
@@ -286,7 +302,10 @@ Deno.serve(async (req) => {
     }
 
     // What's already live, and what the site owner is editing by hand
-    const { data: existing } = await supabase.from("episode_results").select("episode, status, post_merge").eq("season", season);
+    const { data: existing } = await supabase
+      .from("episode_results")
+      .select("episode, status, post_merge, source, voted_out, quit, left_game, immunity, jury_starts, final_tribal, winner")
+      .eq("season", season);
     const published = new Set<number>();
     const manual = new Set<number>();
     let lastPublishedPostMerge = false;
@@ -337,35 +356,66 @@ Deno.serve(async (req) => {
       if (!error) await notifyOwner(supabase, { season, episode: d.episode, status: "published", message: d.note });
     }
 
-    // Tell the owner once when something needs a look (not every hour)
-    const { data: prev } = await supabase
-      .from("episode_sync_log")
-      .select("details")
-      .order("ran_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const prevReview = (prev?.details as { review?: string } | null)?.review || "";
+    // An episode published automatically that the wikis have since changed (a correction, or a
+    // bad edit caught later). Nothing changes by itself: you get an email to check it.
+    const sameFacts = (a: Omit<EpisodeFacts, "episode" | "air_date" | "post_merge">, b: typeof a) =>
+      factsKey({ ...a, episode: 0, air_date: null, post_merge: false }) === factsKey({ ...b, episode: 0, air_date: null, post_merge: false });
+    const changed: number[] = [];
+    for (const r of existing || []) {
+      if (r.status !== "published" || r.source !== "auto") continue;
+      const w = facts.survivor_wiki.episodes.get(r.episode);
+      const wp = facts.wikipedia?.episodes.get(r.episode);
+      if (!w || (wp && !sameFacts(w, wp))) continue; // only when the current answer is settled
+      const pub = {
+        voted_out: r.voted_out || [],
+        quit: r.quit || [],
+        left_game: r.left_game || [],
+        immunity: r.immunity || [],
+        jury_starts: !!r.jury_starts,
+        final_tribal: r.final_tribal || [],
+        winner: r.winner || null,
+      };
+      if (!sameFacts(w, pub)) changed.push(r.episode);
+    }
+
+    // Tell the owner once when something needs a look (not every hour). Compared with the last
+    // run that finished, so a failed run in between doesn't repeat the email.
+    let prevQuery = supabase.from("episode_sync_log").select("details").eq("ok", true);
+    if (runId !== null) prevQuery = prevQuery.neq("id", runId);
+    const { data: prev } = await prevQuery.order("ran_at", { ascending: false }).limit(1).maybeSingle();
+    const prevDetails = (prev?.details as { review?: string; changed?: number[] } | null) || {};
+    const prevReview = prevDetails.review || "";
     const review = decisions.find((d) => d.action === "review");
     const reviewKey = review ? `${review.episode}:${(review as { reason: string }).reason}` : "";
     if (review && reviewKey !== prevReview) {
       await notifyOwner(supabase, { season, episode: review.episode, status: "needs_review", message: (review as { reason: string }).reason });
     }
+    const newlyChanged = changed.filter((e) => !(prevDetails.changed || []).includes(e));
+    for (const ep of newlyChanged) {
+      await notifyOwner(supabase, {
+        season,
+        episode: ep,
+        status: "needs_review",
+        message: "The wikis changed this episode after it was published automatically. Check it in Site admin > Episodes; if you fix it there, leagues that already applied it get an \"Update my league\" button.",
+      });
+    }
 
     const summary =
-      decisions
-        .map((d) =>
+      [
+        ...decisions.map((d) =>
           d.action === "publish"
             ? `Episode ${d.episode} published automatically (${d.note})`
             : `Episode ${d.episode}: ${(d as { reason: string }).reason}`
-        )
-        .join(" ") || "Nothing new to publish.";
-    await supabase.from("episode_sync_log").insert({
-      ran_at: started.toISOString(),
+        ),
+        ...changed.map((e) => `Episode ${e} changed on the wikis after it was published: check it.`),
+      ].join(" ") || "Nothing new to publish.";
+    await finishLog({
       ok: true,
       summary,
       details: {
         fetchNotes,
         review: reviewKey,
+        changed,
         problems: Object.fromEntries(
           sources.map((s) => [s, facts[s] ? Object.fromEntries(facts[s]!.problems) : "not read"])
         ),
@@ -376,7 +426,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     try {
-      await supabase.from("episode_sync_log").insert({ ran_at: started.toISOString(), ok: false, summary: message, details: {} });
+      await finishLog({ ok: false, summary: message, details: {} });
     } catch (_e) {
       // nothing else to do
     }

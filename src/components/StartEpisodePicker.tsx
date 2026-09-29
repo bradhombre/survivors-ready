@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { Undo2 } from "lucide-react";
 import type { Contestant, ScoringEvent } from "@/types/survivor";
 import type { ScoringConfig } from "@/lib/scoring";
-import { pendingEpisodes, planStartedAfter, type EpisodeResult } from "@/lib/episodeResults";
+import { askIfEpisodeCounts, pendingEpisodes, planStartedAfter, type EpisodeResult } from "@/lib/episodeResults";
+import { draftPoolSize } from "@/lib/picksPerTeam";
 import { useLeagueEpisodeResults, type Application } from "@/hooks/useEpisodeResults";
 
 type OnApply = (episode: number, events: never[], eliminateIds: string[], postMerge: boolean, skipped?: boolean) => Promise<number>;
@@ -42,6 +43,9 @@ export function StartEpisodePicker({
   refresh,
   predraft = false,
   onCountFirst,
+  explicitPicks,
+  teamCount,
+  onAnswered,
 }: {
   results: EpisodeResult[];
   handled: Set<number>;
@@ -53,6 +57,11 @@ export function StartEpisodePicker({
   predraft?: boolean;
   /** They're counting from the first waiting episode */
   onCountFirst: () => void;
+  /** Before the draft: a fixed picks-per-team setting that the smaller pool may not fit */
+  explicitPicks?: number | null;
+  teamCount?: number;
+  /** After a "start with episode K" answer is saved */
+  onAnswered?: (start: number) => void;
 }) {
   const pending = useMemo(() => pendingEpisodes(results, handled), [results, handled]);
   const first = pending[0];
@@ -72,7 +81,11 @@ export function StartEpisodePicker({
   if (!pending.length) return null;
 
   const needsPicks = plan ? plan.unmatchedExits.filter((n) => !(n in overrides)) : [];
-  const stillIn = contestants.filter((c) => !c.isEliminated).sort((a, b) => a.name.localeCompare(b.name));
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
+  const pickable = [
+    ...contestants.filter((c) => !c.isEliminated).sort(byName),
+    ...contestants.filter((c) => c.isEliminated).sort(byName),
+  ];
   const options = [...pending, last + 1];
   const label = (k: number) => {
     if (k === last + 1) return `Episode ${k}, the next one to air${predraft ? "" : " (count none of these)"}`;
@@ -86,6 +99,11 @@ export function StartEpisodePicker({
     if (!plan || needsPicks.length) return;
     const eps = plan.steps.map((s) => s.episode);
     const out = plan.goingHome;
+    const poolAfter = draftPoolSize(contestants) - out;
+    const tooMany =
+      predraft && explicitPicks && teamCount && explicitPicks * teamCount > poolAfter
+        ? ` Your league is set to ${explicitPicks} picks per team, which needs ${explicitPicks * teamCount} castaways; ${poolAfter} will be left. Lower it in the Admin tab before drafting.`
+        : "";
     const msg =
       `Start with episode ${start}? No points for ${range(eps)}. ` +
       (out > 0
@@ -93,7 +111,8 @@ export function StartEpisodePicker({
             predraft ? "taken out of the draft" : "marked out"
           }. `
         : "") +
-      "You can undo this for 2 days.";
+      "You can undo this for 2 days." +
+      tooMany;
     if (!window.confirm(msg)) return;
     setBusy(true);
     let done = 0;
@@ -103,6 +122,7 @@ export function StartEpisodePicker({
         done++;
       }
       await refresh();
+      onAnswered?.(start);
       toast.success(
         predraft
           ? `Starting with episode ${start}. ${out} castaway${out === 1 ? "" : "s"} taken out of the draft.`
@@ -114,7 +134,7 @@ export function StartEpisodePicker({
       else
         toast.error(
           done > 0
-            ? `Saved ${done} of ${eps.length} episodes, then: ${err?.message || "an error"}. Pick your first episode again to finish.`
+            ? `Saved ${done} of ${eps.length} episodes, then: ${err?.message || "an error"}. Pick episode ${start} again to finish.`
             : `Couldn't save: ${err?.message || "try again"}`
         );
     } finally {
@@ -163,9 +183,10 @@ export function StartEpisodePicker({
                 <option value="" disabled>
                   Choose a castaway
                 </option>
-                {stillIn.map((c) => (
+                {pickable.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
+                    {c.isEliminated ? " (already out)" : ""}
                   </option>
                 ))}
                 <option value={NOT_IN_LEAGUE}>Not in my league</option>
@@ -194,6 +215,8 @@ export function LateStartCard({
   scoringConfig,
   onApply,
   onUndo,
+  explicitPicks,
+  teamCount,
 }: {
   season: number;
   sessionId?: string;
@@ -202,24 +225,46 @@ export function LateStartCard({
   scoringConfig: ScoringConfig | null;
   onApply: OnApply;
   onUndo: (episode: number) => Promise<number>;
+  explicitPicks?: number | null;
+  teamCount?: number;
 }) {
   const { results, applications, ok, refresh } = useLeagueEpisodeResults(season, sessionId);
   const key = `sr-late-start-${sessionId}`;
-  const [dismissed, setDismissed] = useState(() => {
+  const [dismissed, setDismissedState] = useState(() => {
     try {
       return localStorage.getItem(key) === "1";
     } catch {
       return false;
     }
   });
+  // Remembered per browser so the question doesn't come back after it's answered
+  const setDismissed = (v: boolean) => {
+    try {
+      if (v) localStorage.setItem(key, "1");
+      else localStorage.removeItem(key);
+    } catch {
+      // private window: it just shows again next time
+    }
+    setDismissedState(v);
+  };
   const [busy, setBusy] = useState(false);
   const handled = useMemo(() => new Set(applications.keys()), [applications]);
   const pending = useMemo(() => pendingEpisodes(results, handled), [results, handled]);
 
   if (!ok || contestants.length === 0 || contestants.some((c) => c.owner)) return null;
 
+  // Still asking: nothing answered yet, or an answer that didn't finish (an episode that was
+  // already out when they answered is still waiting)
+  const asking =
+    pending.length > 0 &&
+    askIfEpisodeCounts({
+      applications: [...applications.values()],
+      publishedAt: results.find((r) => r.episode === pending[0])?.published_at,
+    }) &&
+    !dismissed;
+
   // Already answered: show it, with an undo while nobody has drafted yet
-  if (applications.size > 0) {
+  if (applications.size > 0 && !asking) {
     const run = skippedRun(applications);
     if (!run.length || run.length !== applications.size) return null;
     const out = contestants.filter((c) => c.isEliminated).length;
@@ -229,6 +274,7 @@ export function LateStartCard({
       setBusy(true);
       try {
         await undoSkippedRun(run, onUndo);
+        setDismissed(false);
         await refresh();
         toast.success("Undone. Pick your first episode again.");
       } catch (err: any) {
@@ -259,7 +305,7 @@ export function LateStartCard({
     );
   }
 
-  if (dismissed || !pending.length) return null;
+  if (!asking) return null;
   const first = pending[0];
   const last = pending[pending.length - 1];
 
@@ -286,12 +332,10 @@ export function LateStartCard({
             scoringConfig={scoringConfig}
             onApply={onApply}
             refresh={refresh}
+            explicitPicks={explicitPicks}
+            teamCount={teamCount}
+            onAnswered={() => setDismissed(true)}
             onCountFirst={() => {
-              try {
-                localStorage.setItem(key, "1");
-              } catch {
-                // private window: it just shows again next time
-              }
               setDismissed(true);
               toast.success("Got it. After the draft you'll get to count each episode.");
             }}

@@ -260,8 +260,9 @@ const LeagueDashboard = () => {
     const ppt = getPicksPerTeam(state.picksPerTeam, state.gameType, draftPoolSize(state.contestants), state.draftOrder.length);
     const totalPicksCalc = state.draftOrder.length * ppt;
     if (state.currentDraftIndex >= totalPicksCalc) {
-      // Ensure game starts in pre-merge state
-      if (state.isPostMerge) {
+      // Ensure game starts in pre-merge state (unless the league starts after the merge: castaways
+      // who went home before its first episode are already marked out)
+      if (state.isPostMerge && !state.contestants.some((c) => c.isEliminated)) {
         await togglePostMerge();
       }
       setMode("game");
@@ -414,6 +415,8 @@ const LeagueDashboard = () => {
               scoringConfig={scoringConfig}
               onApply={applyEpisodeResults}
               onUndo={undoEpisodeResults}
+              explicitPicks={state.picksPerTeam}
+              teamCount={state.draftOrder.length}
             />
           )}
           {isLeagueAdmin && state.contestants.some(c => c.owner) && (

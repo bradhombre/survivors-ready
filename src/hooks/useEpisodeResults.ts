@@ -5,7 +5,14 @@ import type { EpisodeResult } from "@/lib/episodeResults";
 // The episode results tables are newer than the generated Supabase types
 const db = supabase as unknown as { from: (table: string) => any };
 
-export type Application = { episode: number; skipped: boolean; events_added: number; applied_at: string };
+export type Application = {
+  episode: number;
+  skipped: boolean;
+  events_added: number;
+  applied_at: string;
+  /** Scoring events this apply added (so later plans can tell auto-scored from hand-entered) */
+  event_ids?: string[];
+};
 
 /**
  * Published episode results for a season, plus which episodes this league session has
@@ -23,7 +30,7 @@ export function useLeagueEpisodeResults(season: number | undefined, sessionId: s
     const id = ++requestId.current;
     const [r, a] = await Promise.all([
       db.from("episode_results").select("*").eq("season", season).eq("status", "published").order("episode"),
-      db.from("episode_result_applications").select("episode, skipped, events_added, applied_at").eq("session_id", sessionId),
+      db.from("episode_result_applications").select("episode, skipped, events_added, applied_at, event_ids").eq("session_id", sessionId),
     ]);
     if (id !== requestId.current) return; // a newer refresh already landed
     if (r.error || a.error) {
@@ -54,6 +61,19 @@ export function useLeagueEpisodeResults(season: number | undefined, sessionId: s
 
   return { results, applications, ok, refresh };
 }
+
+/** The facts that change scoring, for "did anything actually change?" */
+const factsOf = (r: EpisodeResult) =>
+  JSON.stringify([
+    [...r.voted_out].sort(),
+    [...r.quit].sort(),
+    [...(r.left_game || [])].sort(),
+    [...r.immunity].sort(),
+    !!r.post_merge,
+    !!r.jury_starts,
+    [...r.final_tribal].sort(),
+    r.winner || null,
+  ]);
 
 /** All results for a season, any status. Site owner only (RLS). */
 export function useAdminEpisodeResults(season: number | undefined) {
@@ -95,11 +115,14 @@ export function useAdminEpisodeResults(season: number | undefined) {
         jury_starts: row.jury_starts,
         final_tribal: row.final_tribal,
         winner: row.winner || null,
-        updated_at: new Date().toISOString(),
         updated_by: userId ?? null,
         // Anything saved here is the site owner's call, even if the wiki job filled it in first
         source: "manual",
       };
+      // updated_at marks a correction: leagues that applied the episode before it get an
+      // "Update my league" button. So it only moves when the facts really changed.
+      const before = results.find((r) => r.episode === row.episode);
+      if (!before || factsOf(before) !== factsOf(row)) payload.updated_at = new Date().toISOString();
       if (publish === true) {
         payload.status = "published";
         payload.published_at = row.published_at || new Date().toISOString();
@@ -110,7 +133,7 @@ export function useAdminEpisodeResults(season: number | undefined) {
       if (error) throw error;
       await refresh();
     },
-    [refresh]
+    [refresh, results]
   );
 
   return { results, resultsSeason, loading, error, refresh, save };

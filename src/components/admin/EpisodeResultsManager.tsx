@@ -152,9 +152,13 @@ function PastSeasonTest({ defaultSeason }: { defaultSeason?: number }) {
   const [text, setText] = useState(defaultSeason ? String(defaultSeason) : "");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
+  const filled = useRef(!!defaultSeason);
   useEffect(() => {
-    if (!text && defaultSeason) setText(String(defaultSeason));
-  }, [defaultSeason, text]);
+    if (!filled.current && defaultSeason) {
+      filled.current = true;
+      setText(String(defaultSeason));
+    }
+  }, [defaultSeason]);
   const run = async () => {
     const n = parseInt(text, 10);
     if (!n) return toast.error("Type a season number");
@@ -613,7 +617,7 @@ export function EpisodeResultsManager() {
                   variant="accent"
                   className="h-11"
                   onClick={() => doSave(true)}
-                  disabled={saving || blocking || missingEarlier.length > 0}
+                  disabled={saving || blocking || missingEarlier.length > 0 || (isPublished && !dirty)}
                 >
                   {isPublished ? "Save changes (stays live)" : "Publish to commissioners"}
                 </Button>
@@ -638,7 +642,7 @@ export function EpisodeResultsManager() {
               </div>
               {isPublished && (
                 <p className="text-xs text-muted-foreground">
-                  Leagues that already applied this episode keep what they got; they can undo and re-apply from their card.
+                  Leagues that already applied this episode keep what they got until their commissioner taps "Update my league" on their card.
                 </p>
               )}
             </>

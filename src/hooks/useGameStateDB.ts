@@ -592,6 +592,13 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
 
       if (currentDraftIndex >= totalPicks || teamCount === 0) return;
 
+      // A league starting mid-season drafts from a smaller pool. Lock in its draft size now, so
+      // undoing "we started with episode K" later can't reopen a finished draft.
+      if (explicitPicks == null && gameType !== "winner_takes_all" && draftPoolSize(state.contestants) < state.contestants.length) {
+        await supabase.from("game_sessions").update({ picks_per_team: picksPerTeam } as any).eq("id", sessionId);
+        setState((prev) => ({ ...prev, picksPerTeam }));
+      }
+
       // Determine owner using snake draft logic
       let owner: Player;
       if (draftType === "snake") {
@@ -829,6 +836,7 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
 
       // Update scoring events
       await supabase.from("scoring_events").delete().eq("session_id", sessionId);
+      await forgetAutoScoring();
       if (parsed.scoringEvents.length > 0) {
         await supabase.from("scoring_events").insert(
           parsed.scoringEvents.map((e: ScoringEvent) => ({
@@ -862,17 +870,34 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     });
   };
 
+  // Auto-scoring remembers which episodes it applied. When scores are cleared, forget those
+  // too, so the episodes can be applied again. (Ignored if the table isn't there yet.)
+  const forgetAutoScoring = async (episode?: number) => {
+    if (!sessionId) return;
+    try {
+      let q = (supabase as any).from("episode_result_applications").delete().eq("session_id", sessionId);
+      if (episode !== undefined) q = q.eq("episode", episode);
+      await q;
+    } catch {
+      // nothing to forget
+    }
+  };
+
   const clearScores = async () => {
     if (!sessionId) return;
     await Promise.all([
       supabase.from("scoring_events").delete().eq("session_id", sessionId),
       supabase.from("crying_contestants").delete().eq("session_id", sessionId),
+      forgetAutoScoring(),
     ]);
   };
 
   const clearEpisodeScores = async (episode: number) => {
     if (!sessionId) return;
-    await supabase.from("scoring_events").delete().eq("session_id", sessionId).eq("episode", episode);
+    await Promise.all([
+      supabase.from("scoring_events").delete().eq("session_id", sessionId).eq("episode", episode),
+      forgetAutoScoring(episode),
+    ]);
   };
 
   const clearHistory = async () => {
@@ -888,6 +913,7 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
       supabase.from("contestants").delete().eq("session_id", sessionId),
       supabase.from("scoring_events").delete().eq("session_id", sessionId),
       supabase.from("crying_contestants").delete().eq("session_id", sessionId),
+      forgetAutoScoring(),
       supabase.from("game_sessions").update({
         season: state.season,
         episode: 1,
@@ -1143,6 +1169,15 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
             await supabase.from("contestants").update({ pick_number: i + 1 }).eq("id", allContestants[i].id);
           }
         }
+      }
+      // Mid-season league (smaller pool): lock in the draft size, as with a live draft
+      const { draftPoolSize } = await import("@/lib/picksPerTeam");
+      const teamCount = state.draftOrder.length || 1;
+      if (state.picksPerTeam == null && draftPoolSize(state.contestants) < state.contestants.length) {
+        await supabase
+          .from("game_sessions")
+          .update({ picks_per_team: Math.max(1, Math.floor(totalAssigned / teamCount)) } as any)
+          .eq("id", sessionId);
       }
       await supabase.from("game_sessions").update({ current_draft_index: totalAssigned }).eq("id", sessionId);
       await loadGameState(sessionId);
