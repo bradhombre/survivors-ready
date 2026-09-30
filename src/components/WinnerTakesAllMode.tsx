@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { confirmDialog } from "@/components/ConfirmHost";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -65,9 +66,11 @@ export function WinnerTakesAllMode({
 
   const handleCrownWinner = async (contestant: Contestant) => {
     if (!sessionId) return;
-    const confirmed = confirm(
-      `Crown ${contestant.name} as the Sole Survivor?\n\nThis will complete the season. ${contestant.owner} wins!`
-    );
+    const confirmed = await confirmDialog({
+      title: `Crown ${contestant.name} as the Sole Survivor?`,
+      description: `This completes the season. ${contestant.owner} wins.`,
+      confirmText: "Crown the winner",
+    });
     if (!confirmed) return;
 
     // Add WIN_SURVIVOR scoring event
@@ -245,8 +248,8 @@ export function WinnerTakesAllMode({
                             ? ""
                             : "border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                         }`}
-                        onClick={() => {
-                          if (!pick.isEliminated && !confirm(`Mark ${pick.name} as voted out?`)) return;
+                        onClick={async () => {
+                          if (!pick.isEliminated && !(await confirmDialog({ title: `Mark ${pick.name} as voted out?`, confirmText: "Voted out", destructive: true }))) return;
                           handleToggleElimination(pick);
                         }}
                       >

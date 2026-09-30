@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { confirmDialog } from "@/components/ConfirmHost";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useGameStateDB } from "@/hooks/useGameStateDB";
 import { useAuth } from "@/hooks/useAuth";
@@ -312,7 +313,7 @@ const LeagueDashboard = () => {
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">My leagues</span>
-              <Lockup className="ml-1 text-xl sm:text-2xl text-[hsl(var(--header-fg))]" />
+              <Lockup className="ml-1 text-2xl text-[hsl(var(--header-fg))]" />
             </Link>
             <div className="flex items-center gap-3">
               <span className="label-caps hidden md:block text-header-label">
@@ -427,11 +428,14 @@ const LeagueDashboard = () => {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => {
-                    const first = confirm("REVERT TO SETUP?\n\nThis will clear ALL draft picks and let you re-draft. Are you sure?");
-                    if (!first) return;
-                    const second = confirm("FINAL CONFIRMATION\n\nAll contestant assignments will be removed. This cannot be undone.\n\nClick OK to revert.");
-                    if (second) revertToSetup();
+                  onClick={async () => {
+                    const ok = await confirmDialog({
+                      title: "Revert to setup?",
+                      description: "Every draft pick is cleared so your league can draft again. This can't be undone.",
+                      confirmText: "Clear picks and revert",
+                      destructive: true,
+                    });
+                    if (ok) revertToSetup();
                   }}
                 >
                   <Undo2 className="h-4 w-4 mr-1" />

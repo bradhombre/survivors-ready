@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { confirmDialog } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -140,10 +141,21 @@ export function EpisodeResultsCard({
     // Undoing a "started after" answer undoes the whole answer (all the episodes it covered)
     const eps = wasSkipped && run.some((a) => a.episode === episode) ? run.map((a) => a.episode) : [episode];
     const span = eps.length === 1 ? `episode ${eps[0]}` : `episodes ${Math.min(...eps)}–${Math.max(...eps)}`;
-    const question = wasSkipped
-      ? `Undo "no points for ${span}"? ${eps.length === 1 ? "It comes" : "They come"} back so you can count ${eps.length === 1 ? "it" : "them"} or pick a different first episode.`
-      : `Undo episode ${episode} auto-scoring? The points it added are removed and castaways it marked out come back.`;
-    if (!window.confirm(question)) return;
+    const ok = await confirmDialog(
+      wasSkipped
+        ? {
+            title: `Undo "no points for ${span}"?`,
+            description: `${eps.length === 1 ? "It comes" : "They come"} back so you can count ${eps.length === 1 ? "it" : "them"} or pick a different first episode.`,
+            confirmText: "Undo",
+          }
+        : {
+            title: `Undo episode ${episode} auto-scoring?`,
+            description: "The points it added are removed and castaways it marked out come back.",
+            confirmText: "Undo",
+            destructive: true,
+          }
+    );
+    if (!ok) return;
     setBusy(true);
     try {
       let n = 0;
@@ -187,14 +199,14 @@ export function EpisodeResultsCard({
     if (corrected === undefined) return;
     const eps = [...applications.values()].filter((a) => a.episode >= corrected).map((a) => a.episode).sort((a, b) => b - a);
     const span = eps.length === 1 ? `episode ${corrected}` : `episodes ${corrected}–${eps[0]}`;
-    if (
-      !window.confirm(
-        `Episode ${corrected}'s results were corrected. This removes the auto-scored points for ${span} and puts ${
-          eps.length === 1 ? "it" : "them"
-        } back on this card so you can apply the corrected results. Points you added by hand stay.`
-      )
-    )
-      return;
+    const ok = await confirmDialog({
+      title: `Update your league for episode ${corrected}?`,
+      description: `Its results were corrected. This removes the auto-scored points for ${span} and puts ${
+        eps.length === 1 ? "it" : "them"
+      } back on this card so you can apply the corrected results. Points you added by hand stay.`,
+      confirmText: "Update my league",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       for (const ep of eps) await onUndo(ep);
@@ -305,11 +317,14 @@ export function EpisodeResultsCard({
       return;
     }
     const out = plan.eliminate.length;
-    const msg =
-      `No points for episode ${plan.episode}. ` +
-      (out > 0 ? `${out === 1 ? "The castaway who went home is" : `The ${out} castaways who went home are`} marked out of your league. ` : "") +
-      "You can undo this for 2 days.";
-    if (!window.confirm(msg)) return;
+    const ok = await confirmDialog({
+      title: `No points for episode ${plan.episode}?`,
+      description:
+        (out > 0 ? `${out === 1 ? "The castaway who went home is" : `The ${out} castaways who went home are`} marked out of your league. ` : "") +
+        "You can undo this for 2 days.",
+      confirmText: `We started after episode ${plan.episode}`,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await onApply(plan.episode, [], plan.eliminate, plan.postMerge, true);

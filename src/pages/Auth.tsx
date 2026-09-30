@@ -86,7 +86,7 @@ export default function Auth() {
       <header className="bg-header">
         <div className="container max-w-md mx-auto px-4 py-5 flex items-center justify-between gap-5">
           <Link to="/" aria-label="Survivors Ready home" className="shrink-0">
-            <Lockup className="text-xl sm:text-2xl" />
+            <Lockup className="text-2xl" />
           </Link>
           <span className="label-caps text-header-label text-right text-[10px] sm:text-xs tracking-[0.18em] leading-loose">
             Survivor fantasy league
@@ -129,7 +129,7 @@ export default function Auth() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Loading...' : isLogin ? 'Sign In' : 'Sign Up'}
+              {isLoading ? 'Loading…' : isLogin ? 'Sign in' : 'Sign up'}
             </Button>
           </form>
 

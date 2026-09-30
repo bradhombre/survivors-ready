@@ -98,7 +98,7 @@ const Index = () => {
 
         {/* Top bar */}
         <div className="relative container max-w-5xl mx-auto px-5 pt-5 flex items-center justify-between">
-          <span className="font-label text-base tracking-[0.2em] text-[#1D3326]">SURVIVOR FANTASY LEAGUE</span>
+          <span className="font-label text-base tracking-[0.2em] text-[#1D3326]">FREE FANTASY LEAGUE</span>
           <button
             onClick={() => navigate("/auth")}
             className="min-h-[44px] px-1 text-base font-bold text-[#1D3326] hover:underline"

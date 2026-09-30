@@ -92,7 +92,7 @@ export function ChatMessage({
                 size="sm"
                 onClick={() => onToggleReaction(id, key)}
                 className={cn(
-                  "h-7 rounded-full px-2 text-xs tabular opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity",
+                  "h-9 sm:h-7 rounded-full px-2 text-xs tabular sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity",
                   isOwn && !isBot && "hover:bg-primary-foreground/15 hover:text-primary-foreground",
                   count > 0 && "opacity-100",
                   hasReacted && "bg-accent text-accent-foreground hover:bg-accent/90 hover:text-accent-foreground"

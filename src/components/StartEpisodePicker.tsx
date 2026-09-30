@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { confirmDialog } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Undo2 } from "lucide-react";
@@ -104,16 +105,20 @@ export function StartEpisodePicker({
       predraft && explicitPicks && teamCount && explicitPicks * teamCount > poolAfter
         ? ` Your league is set to ${explicitPicks} picks per team, which needs ${explicitPicks * teamCount} castaways; ${poolAfter} will be left. Lower it in the Admin tab before drafting.`
         : "";
-    const msg =
-      `Start with episode ${start}? No points for ${range(eps)}. ` +
-      (out > 0
-        ? `The ${out} castaway${out === 1 ? "" : "s"} who went home in ${eps.length === 1 ? "it" : "them"} ${out === 1 ? "is" : "are"} ${
-            predraft ? "taken out of the draft" : "marked out"
-          }. `
-        : "") +
-      "You can undo this for 2 days." +
-      tooMany;
-    if (!window.confirm(msg)) return;
+    const ok = await confirmDialog({
+      title: `Start with episode ${start}?`,
+      description:
+        `No points for ${range(eps)}. ` +
+        (out > 0
+          ? `The ${out} castaway${out === 1 ? "" : "s"} who went home in ${eps.length === 1 ? "it" : "them"} ${out === 1 ? "is" : "are"} ${
+              predraft ? "taken out of the draft" : "marked out"
+            }. `
+          : "") +
+        "You can undo this for 2 days." +
+        tooMany,
+      confirmText: `Start with episode ${start}`,
+    });
+    if (!ok) return;
     setBusy(true);
     let done = 0;
     try {
@@ -270,7 +275,14 @@ export function LateStartCard({
     const out = contestants.filter((c) => c.isEliminated).length;
     const startWith = Math.max(...run.map((a) => a.episode)) + 1;
     const undo = async () => {
-      if (!window.confirm(`Undo "starting with episode ${startWith}"? Castaways taken out of the draft come back.`)) return;
+      if (
+        !(await confirmDialog({
+          title: `Undo "starting with episode ${startWith}"?`,
+          description: "Castaways taken out of the draft come back.",
+          confirmText: "Undo",
+        }))
+      )
+        return;
       setBusy(true);
       try {
         await undoSkippedRun(run, onUndo);

@@ -462,7 +462,7 @@ export function ScoringSettings({ leagueId, onScoringConfigSaved }: ScoringSetti
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full border-2 border-plank bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                              className="absolute -top-2 -right-2 h-8 w-8 sm:h-6 sm:w-6 rounded-full border-2 border-plank bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                               aria-label={`Delete template ${template.name}`}
                             >
                               <Trash2 className="h-3 w-3" />

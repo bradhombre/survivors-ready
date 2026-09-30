@@ -240,7 +240,7 @@ export default function Leagues() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="label-caps text-muted-foreground" role="status">Loading your leagues…</div>
       </div>
     );
@@ -468,7 +468,7 @@ export default function Leagues() {
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? 'Deleting...' : 'Delete My Account'}
+              {deleting ? 'Deleting…' : 'Delete my account'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

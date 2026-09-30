@@ -3,7 +3,7 @@
   "short_name": "Survivors",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#E2DCCB",
+  "background_color": "#1D3326",
   "theme_color": "#1D3326",
   "icons": [
     {

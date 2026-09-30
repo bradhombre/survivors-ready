@@ -143,7 +143,7 @@ export default function Admin() {
 
   if (authLoading || roleLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     );
@@ -152,7 +152,7 @@ export default function Admin() {
   if (!isSuperAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <header className="bg-header">
         <div className="container mx-auto max-w-6xl px-4 pt-4 pb-5 flex justify-between items-start gap-3">
           <div className="flex flex-col gap-2 min-w-0">

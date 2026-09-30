@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, formatDistanceToNow } from "date-fns";
 import { Users, Gamepad2, MessageSquare, Trophy, Copy, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useNotify as useToast } from "@/lib/notify";
 
 interface LeagueDetailSheetProps {
   leagueId: string | null;

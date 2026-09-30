@@ -11,7 +11,7 @@ import {
 import { LeagueDetailSheet } from "./LeagueDetailSheet";
 import { Users, Eye, Search, ArrowUpDown, ExternalLink, Archive, ArchiveRestore, Copy, RefreshCw } from "lucide-react";
 import { formatDistanceToNow, differenceInDays } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { useNotify as useToast } from "@/lib/notify";
 
 // One row per league from the admin_league_health() database function (site owner only).
 // "Last activity" there counts only things people do: chat (not JeffBot), scoring,

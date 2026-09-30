@@ -78,7 +78,7 @@ export default function JoinByLink() {
     <div className="min-h-screen flex flex-col">
       <header className="bg-header">
         <div className="container max-w-md mx-auto px-4 py-5">
-          <Lockup className="text-xl sm:text-2xl" />
+          <Lockup className="text-2xl" />
         </div>
       </header>
       <div className="buff-trim" aria-hidden="true" />

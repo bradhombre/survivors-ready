@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
+import { confirmDialog } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Player, Contestant, ScoringEvent, SCORING_ACTIONS } from "@/types/survivor";
 import { ChevronUp, ChevronDown, Undo, Save, Plus, Minus, Search, ChevronRight, Grid3x3, List, Upload, User, Trophy, Scale, Flame, TreePalm, MoreHorizontal, Droplets, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useNotify as useToast } from "@/lib/notify";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FinalPredictionDialog } from "./FinalPredictionDialog";
 import { getPoints, isActionEnabled, getCustomActions, CustomScoringAction, ScoringConfig } from "@/lib/scoring";
@@ -260,8 +261,8 @@ export const GameMode = ({
     onAddScoringEvent(contestant.id, contestant.name, action, points);
     if (currentUserId) updateLastActive(currentUserId);
     toast({
-      title: points > 0 ? "Points added" : "Points deducted",
-      description: `${contestant.name}: ${action} (${points > 0 ? "+" : ""}${points})`,
+      title: points > 0 ? "Points added" : points < 0 ? "Points deducted" : "Saved",
+      description: `${contestant.name}: ${action}${points !== 0 ? ` (${points > 0 ? "+" : ""}${points})` : ""}`,
     });
   };
 
@@ -721,13 +722,12 @@ export const GameMode = ({
                               teamName={String(entry.player)} 
                               avatarUrl={teamDataMap[entry.player]?.avatar_url} 
                               size="lg"
-                              className="border-2 border-border"
                             />
                           ) : (
                             <img 
                               src={playerProfiles[entry.player].avatar} 
                               alt={entry.player}
-                              className="w-16 h-16 rounded-full object-cover border-2 border-border"
+                              className="w-16 h-16 rounded-full object-cover border-2 border-plank"
                             />
                           )}
                         </>
@@ -741,7 +741,7 @@ export const GameMode = ({
                         {(() => {
                           const epPts = getPlayerScoreByEpisode(entry.player, episode);
                           return epPts !== 0 ? (
-                            <span className="text-sm font-bold text-success tabular">
+                            <span className={`text-sm font-bold tabular ${epPts < 0 ? "text-destructive" : "text-success"}`}>
                               {epPts > 0 ? "+" : ""}
                               {epPts} ep {episode}
                             </span>
@@ -784,7 +784,7 @@ export const GameMode = ({
                               }`}
                             >
                               <div className="font-semibold">Ep {ep}</div>
-                              <div className="text-success font-extrabold tabular">
+                              <div className={`font-extrabold tabular ${epScore < 0 ? "text-destructive" : "text-success"}`}>
                                 {epScore > 0 && '+'}
                                 {epScore}
                               </div>
@@ -1058,8 +1058,8 @@ export const GameMode = ({
 
                         {isAdmin && !contestant.isEliminated && (
                           <Button
-                            onClick={() => {
-                              if (!confirm(`Mark ${contestant.name} as voted out?`)) return;
+                            onClick={async () => {
+                              if (!(await confirmDialog({ title: `Mark ${contestant.name} as voted out?`, confirmText: "Voted out", destructive: true }))) return;
                               handleQuickScore(contestant, SCORING_ACTIONS.VOTED_OUT.label, getPoints("VOTED_OUT", scoringConfig));
                             }}
                             variant="outline"
@@ -1223,8 +1223,8 @@ export const GameMode = ({
 
                   {isAdmin && !contestant.isEliminated && (
                     <Button
-                      onClick={() => {
-                        if (!confirm(`Mark ${contestant.name} as voted out?`)) return;
+                      onClick={async () => {
+                        if (!(await confirmDialog({ title: `Mark ${contestant.name} as voted out?`, confirmText: "Voted out", destructive: true }))) return;
                         handleQuickScore(contestant, SCORING_ACTIONS.VOTED_OUT.label, getPoints("VOTED_OUT", scoringConfig));
                       }}
                       variant="outline"

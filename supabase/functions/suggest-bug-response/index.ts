@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a friendly support agent for a Survivor fantasy league app called "Survivor Fantasy". 
+            content: `You are a friendly support agent for a Survivor fantasy league app called "Survivors Ready". 
 Write a brief, helpful response to a user's bug report. Be empathetic, acknowledge their issue, and let them know the status.
 Keep it to 2-3 sentences max. Use a casual, friendly tone. Don't use markdown formatting.
 Current bug status: ${status || "open"}.

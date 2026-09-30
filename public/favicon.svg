@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs><clipPath id="sky"><rect x="0" y="0" width="512" height="300"/></clipPath></defs>
+  <rect width="512" height="512" fill="#1D3326"/>
+  <g clip-path="url(#sky)"><circle cx="336" cy="300" r="150" fill="#E0782E"/></g>
+  <rect x="0" y="300" width="512" height="212" fill="#1F5F73"/>
+  <rect x="230" y="338" width="212" height="28" rx="14" fill="#E0782E"/>
+  <rect x="270" y="394" width="132" height="26" rx="13" fill="#E0782E"/>
+  <rect x="302" y="448" width="68" height="24" rx="12" fill="#E0782E"/>
+  <rect x="126" y="196" width="28" height="330" rx="6" fill="#D8B55E"/>
+  <rect x="126" y="262" width="28" height="7" fill="#8A6A2A"/>
+  <rect x="126" y="334" width="28" height="7" fill="#8A6A2A"/>
+  <rect x="126" y="406" width="28" height="7" fill="#8A6A2A"/>
+  <path d="M108 180 L172 180 L162 232 L118 232 Z" fill="#8A6A2A"/>
+  <path d="M114 192 L166 214 M166 192 L114 214" stroke="#D8B55E" stroke-width="6"/>
+  <path d="M140 40 C176 88 196 124 184 160 C176 182 158 190 140 190 C122 190 104 182 96 160 C84 126 110 96 124 70 C128 96 134 106 140 112 C146 92 146 66 140 40 Z" fill="#F2A541"/>
+  <path d="M140 104 C156 126 164 146 158 164 C154 176 148 182 140 182 C132 182 124 176 122 164 C118 146 128 132 134 120 C136 132 138 138 140 140 C142 128 142 116 140 104 Z" fill="#FBE3A1"/>
+</svg>

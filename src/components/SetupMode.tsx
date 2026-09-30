@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { confirmDialog } from "@/components/ConfirmHost";
 import { draftPoolSize, getPicksPerTeam } from "@/lib/picksPerTeam";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Shuffle, Upload, Download, Trash2, Play, List, GripVertical, Pencil, Check, X, Plus, Minus, Users, Copy, UserPlus, ArrowUp, ArrowDown } from "lucide-react";
 import { Player, Contestant, DraftType } from "@/types/survivor";
-import { useToast } from "@/hooks/use-toast";
+import { useNotify as useToast } from "@/lib/notify";
 import { useLeagueTeams } from "@/hooks/useLeagueTeams";
 import { useLeagueRole } from "@/hooks/useLeagueRole";
 import { supabase } from "@/integrations/supabase/client";
@@ -994,11 +995,13 @@ export const SetupMode = ({
       {/* Start Draft */}
       <Card className="p-6">
         <Button
-          onClick={() => {
+          onClick={async () => {
             if (filledCount < leagueSize) {
-              const proceed = window.confirm(
-                `Only ${filledCount} of ${leagueSize} team slots are filled. Players who haven't joined yet won't be able to draft.\n\nAre you sure you want to start?`
-              );
+              const proceed = await confirmDialog({
+                title: "Start the draft anyway?",
+                description: `Only ${filledCount} of ${leagueSize} team slots are filled. Players who haven't joined yet won't be able to draft.`,
+                confirmText: "Start the draft",
+              });
               if (!proceed) return;
             }
             onStartDraft();

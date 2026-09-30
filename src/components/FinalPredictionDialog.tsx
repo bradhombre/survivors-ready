@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Contestant, Player } from "@/types/survivor";
 import { CheckCircle2, Circle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useNotify as useToast } from "@/lib/notify";
 
 interface Prediction {
   id: string;

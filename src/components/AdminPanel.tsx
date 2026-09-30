@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { confirmDialog } from "@/components/ConfirmHost";
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,26 +117,26 @@ export function AdminPanel({
     }
   };
 
-  const handleClearScores = () => {
-    if (!confirm('Clear all scoring events for the current season? This cannot be undone.')) return;
+  const handleClearScores = async () => {
+    if (!(await confirmDialog({ title: "Clear all scores this season?", description: "Every scoring event this season is removed. This can't be undone.", confirmText: "Clear scores", destructive: true }))) return;
     onClearScores?.();
     toast.success('Current season scores cleared');
   };
 
-  const handleClearEpisodeScores = () => {
-    if (!confirm(`Clear all scoring events for Episode ${selectedEpisode}? This cannot be undone.`)) return;
+  const handleClearEpisodeScores = async () => {
+    if (!(await confirmDialog({ title: `Clear episode ${selectedEpisode} scores?`, description: "Every scoring event for this episode is removed. This can't be undone.", confirmText: "Clear episode", destructive: true }))) return;
     onClearEpisodeScores?.(selectedEpisode);
     toast.success(`Episode ${selectedEpisode} scores cleared`);
   };
 
-  const handleClearHistory = () => {
-    if (!confirm("Delete this league's archived seasons from History? This cannot be undone.")) return;
+  const handleClearHistory = async () => {
+    if (!(await confirmDialog({ title: "Delete past seasons?", description: "This league's archived seasons are removed from History. This can't be undone.", confirmText: "Delete history", destructive: true }))) return;
     onClearHistory?.();
     toast.success('Season history cleared');
   };
 
-  const handleResetAll = () => {
-    if (!confirm('Reset EVERYTHING? This will clear all game data and start fresh. This cannot be undone.')) return;
+  const handleResetAll = async () => {
+    if (!(await confirmDialog({ title: "Reset everything?", description: "All game data for this season is cleared and the league starts fresh. This can't be undone.", confirmText: "Reset everything", destructive: true }))) return;
     onResetAll?.();
     toast.success('All game data reset');
   };
@@ -184,7 +185,7 @@ export function AdminPanel({
   };
 
   const deleteContestantFromDB = async (contestantId: string) => {
-    if (!confirm('Are you sure you want to delete this contestant?')) return;
+    if (!(await confirmDialog({ title: "Delete this castaway?", confirmText: "Delete", destructive: true }))) return;
 
     const { error } = await supabase
       .from('contestants')
@@ -200,7 +201,7 @@ export function AdminPanel({
   };
 
   const cleanupDuplicates = async () => {
-    if (!confirm('Remove duplicate contestants from the database? This will keep the best version of each contestant.')) return;
+    if (!(await confirmDialog({ title: "Remove duplicate castaways?", description: "The most complete copy of each castaway is kept.", confirmText: "Remove duplicates" }))) return;
     
     setIsLoading(true);
     try {
@@ -309,7 +310,7 @@ export function AdminPanel({
                     <Scale className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
                     <h3 className="font-display text-2xl leading-none mb-3">Scoring not applicable</h3>
                     <p className="text-sm text-muted-foreground">
-                      Custom scoring rules don't apply to Winner Takes All leagues. Switch to Full Fantasy to use custom scoring.
+                      Custom scoring rules don't apply to winner-takes-all leagues. Switch to full fantasy to use custom scoring.
                     </p>
                   </Card>
                 </div>
@@ -481,11 +482,14 @@ export function AdminPanel({
                   <Button
                     variant="outline"
                     className="w-full justify-start"
-                    onClick={() => {
-                      const first = confirm("REVERT TO SETUP?\n\nThis will clear ALL draft picks and let you re-draft. Are you sure?");
-                      if (!first) return;
-                      const second = confirm("FINAL CONFIRMATION\n\nAll contestant assignments will be removed. This cannot be undone.\n\nClick OK to revert.");
-                      if (second) onRevertToSetup?.();
+                    onClick={async () => {
+                      const ok = await confirmDialog({
+                        title: "Revert to setup?",
+                        description: "Every draft pick is cleared so your league can draft again. This can't be undone.",
+                        confirmText: "Clear picks and revert",
+                        destructive: true,
+                      });
+                      if (ok) onRevertToSetup?.();
                     }}
                     disabled={!contestants.some(c => c.owner)}
                   >
