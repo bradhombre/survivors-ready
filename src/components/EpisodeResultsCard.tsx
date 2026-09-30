@@ -307,7 +307,7 @@ export function EpisodeResultsCard({
     const out = plan.eliminate.length;
     const msg =
       `No points for episode ${plan.episode}. ` +
-      (out > 0 ? `${out === 1 ? "The castaway who went home is" : `The ${out} castaways who went home are`} marked out. ` : "") +
+      (out > 0 ? `${out === 1 ? "The castaway who went home is" : `The ${out} castaways who went home are`} marked out of your league. ` : "") +
       "You can undo this for 2 days.";
     if (!window.confirm(msg)) return;
     setBusy(true);
@@ -339,13 +339,27 @@ export function EpisodeResultsCard({
           <h2 className="font-display text-3xl leading-none mt-1">
             {pickFirstEpisode ? `Episodes ${plan.episode}–${pendingList[pendingList.length - 1]} results are in` : `Episode ${plan.episode} results are in`}
           </h2>
-          <p className="mt-2 text-sm text-header-label max-w-[60ch]">
-            {pickFirstEpisode
-              ? "Which episode did your league start with? Episodes before it get no points; whoever went home in them is marked out. From your first episode on, you review and count each one."
-              : firstEpisodeForLeague
-              ? `Did your league start before episode ${plan.episode} aired? Count it and your teams get its points. Started after? Just mark who went home, no points.`
-              : "Voted out, survival points and immunity, ready to add in one tap. Review first; the details are spoilers."}
-          </p>
+          {pickFirstEpisode ? (
+            <p className="mt-2 text-sm text-header-label max-w-[60ch]">
+              Which episode did your league start with? Episodes before it get no points. We'll just mark who went home
+              in them so they're out of your league. From your first episode on, you review and count each one.
+            </p>
+          ) : firstEpisodeForLeague ? (
+            <div className="mt-2 space-y-1.5 text-sm text-header-label max-w-[60ch]">
+              <p className="font-bold">Did your league start before episode {plan.episode} aired?</p>
+              <p>
+                <b>Count episode {plan.episode}:</b> your teams get points for it.
+              </p>
+              <p>
+                <b>We started after episode {plan.episode}:</b> no points for it. We'll just mark who went home so they're out
+                of your league.
+              </p>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-header-label max-w-[60ch]">
+              Voted out, survival points and immunity, ready to add in one tap. Review first; the details are spoilers.
+            </p>
+          )}
         </div>
         {pickFirstEpisode ? (
           <div className="px-5 py-4 sm:px-6">
