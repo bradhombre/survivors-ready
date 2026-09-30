@@ -81,6 +81,7 @@ Rules:
 - merged: true if the tribes had merged by this episode (one merged tribe).
 - first_juror_voted_out: true only if a castaway eliminated in this episode became the FIRST member of the jury.
 - The finale often covers several Tribal Councils in one episode: list everyone eliminated in it (including the fire-making loser) in voted_out, every individual immunity winner, the finalists in final_tribal and the Sole Survivor in winner.
+- In a finale, a castaway shown as "Eliminated" with "no vote" (just before the Final Tribal Council) lost the fire-making challenge. Put them in voted_out. That is normal, not a reason to mark the episode uncertain.
 - final_tribal and winner: only for the finale episode. Ignore any reunion or aftershow listed after it.
 - A two-hour episode shown as one row in the table is one episode.
 - If anything is unclear or the tables contradict each other, add a short note to "uncertain" for that episode instead of guessing.`;

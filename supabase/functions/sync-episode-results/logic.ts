@@ -61,7 +61,9 @@ export const normalizeName = (s: string) =>
     .replace(/[^a-z0-9]/g, "");
 
 /** Turn wiki page HTML into compact "## caption / row | row" text: tables only, long cells trimmed. */
-export function htmlTablesToText(html: string, maxCell = 160): string {
+// Cells are trimmed so huge ones don't crowd out the results, but kept long enough for the
+// table notes (they explain things like a fire-making elimination).
+export function htmlTablesToText(html: string, maxCell = 2000): string {
   const decode = (s: string) =>
     s
       .replace(/&nbsp;|&#160;/g, " ")
