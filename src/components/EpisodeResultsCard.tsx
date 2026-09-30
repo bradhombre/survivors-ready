@@ -150,7 +150,7 @@ export function EpisodeResultsCard({
       if (wasSkipped) await undoSkippedRun(run.filter((a) => eps.includes(a.episode)), onUndo);
       else n = await onUndo(episode);
       await refresh();
-      toast.success(wasSkipped ? `${span[0].toUpperCase()}${span.slice(1)} ${eps.length === 1 ? "is" : "are"} back on the card` : `Episode ${episode} auto-scoring undone (${n} events removed)`);
+      toast.success(wasSkipped ? `${span[0].toUpperCase()}${span.slice(1)} ${eps.length === 1 ? "is" : "are"} back on the card` : `Episode ${episode} auto-scoring undone (${n} ${n === 1 ? "event" : "events"} removed)`);
     } catch (err: any) {
       toast.error(`Couldn't undo: ${err?.message || "try again"}`);
     } finally {
@@ -166,7 +166,7 @@ export function EpisodeResultsCard({
             ? `Episodes ${Math.min(...run.map((a) => a.episode))}–${lastApplied.episode}: no points (your league started with episode ${lastApplied.episode + 1}).`
             : `Episode ${lastApplied.episode}: no points (your league started after it).`
           : lastApplied.events_added > 0
-          ? `Episode ${lastApplied.episode} was auto-scored (${lastApplied.events_added} events).`
+          ? `Episode ${lastApplied.episode} was auto-scored (${lastApplied.events_added} ${lastApplied.events_added === 1 ? "event" : "events"}).`
           : `Episode ${lastApplied.episode} was marked done.`}
       </span>
       <button
@@ -257,7 +257,8 @@ export function EpisodeResultsCard({
   const grouped = GROUPS.map((g) => ({ ...g, events: plan.events.filter((e) => e.key === g.key) })).filter(
     (g) => g.events.length > 0
   );
-  const teams = pointsByTeam(plan);
+  // Only teams whose score changes (a 0-point exit alone isn't worth a line)
+  const teams = pointsByTeam(plan).filter(([, pts]) => pts !== 0);
   // Every name we couldn't match needs a pick (or "not in my league") before applying
   const unmatched = [...plan.unmatchedExits, ...plan.unmatchedOther];
   const needsPicks = unmatched.filter((n) => !(n in overrides));
@@ -280,7 +281,7 @@ export function EpisodeResultsCard({
       await refresh();
       setOpen(false);
       const ep = plan.episode;
-      toast.success(added > 0 ? `Episode ${ep} scored: ${added} events added` : `Episode ${ep} marked done`, {
+      toast.success(added > 0 ? `Episode ${ep} scored: ${added} ${added === 1 ? "event" : "events"} added` : `Episode ${ep} marked done`, {
         action: added > 0 ? { label: "Undo", onClick: () => undo(ep) } : undefined,
       });
     } catch (err: any) {
@@ -500,7 +501,7 @@ export function EpisodeResultsCard({
                 ? "Pick the names above"
                 : nothingToAdd
                 ? "Mark as done"
-                : `Add ${plan.events.length} events`}
+                : `Add ${plan.events.length} ${plan.events.length === 1 ? "event" : "events"}`}
             </Button>
           </DialogFooter>
         </DialogContent>
