@@ -323,8 +323,36 @@ export type Database = {
           },
         ]
       }
+      episode_result_candidates: {
+        Row: {
+          episode: number
+          facts: Json
+          first_seen_at: string
+          hash: string
+          season: number
+          source: string
+        }
+        Insert: {
+          episode: number
+          facts: Json
+          first_seen_at?: string
+          hash: string
+          season: number
+          source: string
+        }
+        Update: {
+          episode?: number
+          facts?: Json
+          first_seen_at?: string
+          hash?: string
+          season?: number
+          source?: string
+        }
+        Relationships: []
+      }
       episode_results: {
         Row: {
+          auto_note: string | null
           episode: number
           final_tribal: string[]
           id: string
@@ -335,6 +363,7 @@ export type Database = {
           published_at: string | null
           quit: string[]
           season: number
+          source: string
           status: string
           updated_at: string
           updated_by: string | null
@@ -342,6 +371,7 @@ export type Database = {
           winner: string | null
         }
         Insert: {
+          auto_note?: string | null
           episode: number
           final_tribal?: string[]
           id?: string
@@ -352,6 +382,7 @@ export type Database = {
           published_at?: string | null
           quit?: string[]
           season: number
+          source?: string
           status?: string
           updated_at?: string
           updated_by?: string | null
@@ -359,6 +390,7 @@ export type Database = {
           winner?: string | null
         }
         Update: {
+          auto_note?: string | null
           episode?: number
           final_tribal?: string[]
           id?: string
@@ -369,11 +401,60 @@ export type Database = {
           published_at?: string | null
           quit?: string[]
           season?: number
+          source?: string
           status?: string
           updated_at?: string
           updated_by?: string | null
           voted_out?: string[]
           winner?: string | null
+        }
+        Relationships: []
+      }
+      episode_sync_log: {
+        Row: {
+          details: Json
+          id: number
+          ok: boolean
+          ran_at: string
+          summary: string | null
+        }
+        Insert: {
+          details?: Json
+          id?: number
+          ok?: boolean
+          ran_at?: string
+          summary?: string | null
+        }
+        Update: {
+          details?: Json
+          id?: number
+          ok?: boolean
+          ran_at?: string
+          summary?: string | null
+        }
+        Relationships: []
+      }
+      episode_sync_state: {
+        Row: {
+          content_hash: string
+          raw: Json
+          season: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          content_hash: string
+          raw?: Json
+          season: number
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          content_hash?: string
+          raw?: Json
+          season?: number
+          source?: string
+          updated_at?: string
         }
         Relationships: []
       }
