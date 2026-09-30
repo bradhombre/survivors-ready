@@ -269,6 +269,114 @@ export type Database = {
           },
         ]
       }
+      episode_result_applications: {
+        Row: {
+          applied_at: string
+          applied_by: string | null
+          eliminated_ids: string[]
+          episode: number
+          event_ids: string[]
+          events_added: number
+          league_id: string
+          season: number
+          session_id: string
+          skipped: boolean
+        }
+        Insert: {
+          applied_at?: string
+          applied_by?: string | null
+          eliminated_ids?: string[]
+          episode: number
+          event_ids?: string[]
+          events_added?: number
+          league_id: string
+          season: number
+          session_id: string
+          skipped?: boolean
+        }
+        Update: {
+          applied_at?: string
+          applied_by?: string | null
+          eliminated_ids?: string[]
+          episode?: number
+          event_ids?: string[]
+          events_added?: number
+          league_id?: string
+          season?: number
+          session_id?: string
+          skipped?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episode_result_applications_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "episode_result_applications_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "game_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      episode_results: {
+        Row: {
+          episode: number
+          final_tribal: string[]
+          id: string
+          immunity: string[]
+          jury_starts: boolean
+          left_game: string[]
+          post_merge: boolean
+          published_at: string | null
+          quit: string[]
+          season: number
+          status: string
+          updated_at: string
+          updated_by: string | null
+          voted_out: string[]
+          winner: string | null
+        }
+        Insert: {
+          episode: number
+          final_tribal?: string[]
+          id?: string
+          immunity?: string[]
+          jury_starts?: boolean
+          left_game?: string[]
+          post_merge?: boolean
+          published_at?: string | null
+          quit?: string[]
+          season: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          voted_out?: string[]
+          winner?: string | null
+        }
+        Update: {
+          episode?: number
+          final_tribal?: string[]
+          id?: string
+          immunity?: string[]
+          jury_starts?: boolean
+          left_game?: string[]
+          post_merge?: boolean
+          published_at?: string | null
+          quit?: string[]
+          season?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          voted_out?: string[]
+          winner?: string | null
+        }
+        Relationships: []
+      }
       final_predictions: {
         Row: {
           created_at: string
@@ -751,6 +859,17 @@ export type Database = {
         Args: { archive: boolean; league_ids: string[] }
         Returns: number
       }
+      apply_episode_results: {
+        Args: {
+          _eliminate: string[]
+          _episode: number
+          _events: Json
+          _post_merge: boolean
+          _session_id: string
+          _skipped?: boolean
+        }
+        Returns: number
+      }
       claim_team: {
         Args: { team_id: string }
         Returns: {
@@ -833,6 +952,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_league_commissioner: {
+        Args: { _league_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_league_member: {
         Args: { _league_id: string; _user_id: string }
         Returns: boolean
@@ -890,6 +1013,10 @@ export type Database = {
       resize_league: {
         Args: { league_uuid: string; new_size: number }
         Returns: undefined
+      }
+      undo_episode_results: {
+        Args: { _episode: number; _session_id: string }
+        Returns: number
       }
     }
     Enums: {
