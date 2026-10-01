@@ -278,6 +278,22 @@ Deno.serve(async (req) => {
     );
 
     const reqMode = reqBody?.mode as string | undefined;
+
+    // Importing a cast or fetching photos is for the site owner (it uses paid scraping).
+    // "auto" only runs when the current season has no cast yet, so it stays open.
+    if (reqMode !== "auto") {
+      const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
+      const { data: authData } = token ? await supabase.auth.getUser(token) : { data: null };
+      const callerId = authData?.user?.id;
+      const { data: isOwner } = callerId ? await supabase.rpc("is_super_admin", { _user_id: callerId }) : { data: false };
+      if (!isOwner) {
+        return new Response(JSON.stringify({ success: false, error: "Site owner only" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     if (reqMode === "import_cast" || reqMode === "auto") {
       if (reqMode === "auto") {
         const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "current_season").maybeSingle();

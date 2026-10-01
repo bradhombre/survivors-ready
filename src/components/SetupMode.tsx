@@ -82,6 +82,7 @@ export const SetupMode = ({
   const [editTeamName, setEditTeamName] = useState("");
   const [isResizing, setIsResizing] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [leagueName, setLeagueName] = useState<string | null>(null);
   const [isImportingCast, setIsImportingCast] = useState(false);
   const [leagueMembers, setLeagueMembers] = useState<LeagueMember[]>([]);
   const [assigningTeamId, setAssigningTeamId] = useState<string | null>(null);
@@ -119,10 +120,13 @@ export const SetupMode = ({
     const fetchInviteCode = async () => {
       const { data } = await supabase
         .from('leagues')
-        .select('invite_code')
+        .select('invite_code, name')
         .eq('id', leagueId)
         .maybeSingle();
-      if (data) setInviteCode(data.invite_code);
+      if (data) {
+        setInviteCode(data.invite_code);
+        setLeagueName(data.name);
+      }
     };
     fetchInviteCode();
   });
@@ -209,7 +213,8 @@ export const SetupMode = ({
     navigator.clipboard.writeText(link);
     toast({ title: "Invite link copied!" });
     trackEvent('league_invite_sent', {
-      league_name: leagueId,
+      league_id: leagueId,
+      league_name: leagueName,
       invite_url: link,
     });
   };

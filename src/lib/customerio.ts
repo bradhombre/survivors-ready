@@ -6,6 +6,7 @@ declare global {
     _cio: {
       identify: (data: Record<string, unknown>) => void;
       track: (name: string, data?: Record<string, unknown>) => void;
+      reset?: () => void;
     };
   }
 }
@@ -51,4 +52,10 @@ export function setAttributes(id: string, attributes: Record<string, unknown>) {
   const cio = getCio();
   if (!cio) return;
   cio.identify({ id, ...attributes });
+}
+
+/** Forget the signed-in person on this device (call on sign-out), so the next person isn't tracked as them */
+export function resetUser() {
+  const cio = getCio();
+  if (cio && typeof cio.reset === "function") cio.reset();
 }

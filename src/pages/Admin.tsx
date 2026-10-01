@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { NewsManager } from "@/components/admin/NewsManager";
 import { CastManager } from "@/components/admin/CastManager";
 import { AdminSettings } from "@/components/admin/AdminSettings";
+import { CioSyncPanel } from "@/components/admin/CioSyncPanel";
 import { LeagueManager } from "@/components/admin/LeagueManager";
 import { ArrowLeft, Users, Newspaper, UserCircle, UserCog, Settings, Bug, Sparkles, Send, Loader2, MessageSquare, Clapperboard } from "lucide-react";
 import { ChatMonitor } from "@/components/admin/ChatMonitor";
@@ -358,7 +359,10 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="accounts"><UserManager /></TabsContent>
-          <TabsContent value="settings"><AdminSettings /></TabsContent>
+          <TabsContent value="settings">
+            <AdminSettings />
+            <CioSyncPanel />
+          </TabsContent>
         </Tabs>
       </main>
     </div>

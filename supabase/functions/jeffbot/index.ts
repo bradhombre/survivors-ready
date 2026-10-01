@@ -30,6 +30,28 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Only a signed-in member of this league (or the site owner) can ask, and the answer is
+    // posted as a reply to them, not to whatever user_id the request claims.
+    const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
+    const { data: authData } = token ? await supabase.auth.getUser(token) : { data: null };
+    const callerId = authData?.user?.id;
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: "Sign in to ask JeffBot" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const [{ data: isMember }, { data: isOwner }] = await Promise.all([
+      supabase.rpc("is_league_member", { _user_id: callerId, _league_id: league_id }),
+      supabase.rpc("is_super_admin", { _user_id: callerId }),
+    ]);
+    if (!isMember && !isOwner) {
+      return new Response(JSON.stringify({ error: "Only league members can ask JeffBot here" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Fetch current season from the league's game session
     const { data: session, error: sessionError } = await supabase
       .from("game_sessions")
@@ -140,7 +162,7 @@ FORMAT: Keep responses concise (2-4 sentences) for chat. Be specific with names,
       .from("chat_messages")
       .insert({
         league_id,
-        user_id,
+        user_id: callerId,
         content: botResponse.slice(0, 500), // Ensure within limit
         is_bot: true,
       });

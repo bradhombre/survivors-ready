@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
-import { identifyUser, trackEvent } from '@/lib/customerio';
+import { identifyUser, resetUser } from '@/lib/customerio';
 
 export type UserRole = 'admin' | 'user';
 
@@ -50,14 +50,11 @@ export function useAuth() {
               session.user.email || '',
               session.user.created_at || new Date().toISOString()
             );
-            // Fire signup event only for newly created users (created within last 24 hours)
-            // 24 hours gives enough time for users to confirm their email
-            const createdAt = new Date(session.user.created_at || 0).getTime();
-            if (event === 'SIGNED_IN' && Date.now() - createdAt < 86_400_000) {
-              trackEvent('user_signed_up');
-            }
+            // "user_signed_up" now comes from the server (cio-sync), once per person. The
+            // browser used to send it on every sign-in in the first 24 hours.
           }, 0);
         } else {
+          if (event === 'SIGNED_OUT') resetUser();
           setUserRole(null);
           setPlayerName(null);
           setLoading(false);
