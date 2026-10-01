@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { trackEvent } from "@/lib/customerio";
 
 interface BugReportDialogProps {
   open: boolean;
@@ -38,13 +37,9 @@ export function BugReportDialog({ open, onOpenChange, leagueId }: BugReportDialo
     if (error) {
       toast.error("Failed to submit bug report");
     } else {
-      // Customer.io automation "Bug report → Brad" emails the details to Brad.
-      // (Browser tracking can be blocked by ad blockers; Site admin > Bugs always has every report.)
-      trackEvent("bug_reported", {
-        description: report.description,
-        page_url: report.page_url,
-        league_id: report.league_id,
-      });
+      // Brad gets an email about each report: the hourly Customer.io sync (server) sends a
+      // bug_reported event, which the "Bug report → Brad" automation emails. Not sent from the
+      // browser, because ad blockers stopped that.
       toast.success("Bug report submitted — thank you!");
       setDescription("");
       onOpenChange(false);

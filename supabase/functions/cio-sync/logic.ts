@@ -35,6 +35,14 @@ export type ScoringEvent = {
 };
 export type Application = { session_id: string; episode: number; skipped: boolean; applied_at: string };
 export type Profile = { id: string; email: string | null; display_name: string | null; created_at: string };
+export type BugReport = {
+  id: string;
+  user_id: string | null;
+  description: string;
+  page_url: string | null;
+  league_id: string | null;
+  created_at: string;
+};
 
 export type Snapshot = {
   now: Date;
@@ -50,6 +58,8 @@ export type Snapshot = {
   profiles: Profile[];
   /** league_id -> stage, from the database (same rules as Site admin > Leagues) */
   stages: Map<string, Stage>;
+  /** Bug reports filed since CONFIG.bugReportsFrom */
+  bugReports: BugReport[];
 };
 
 export type Stage =
@@ -70,6 +80,12 @@ export const CONFIG = {
   minEventsForScored: 3,
   /** ...and nothing new was added for this long */
   scoredQuietHours: 12,
+  /**
+   * Bug reports go to Brad by email ("Bug report → Brad" in Customer.io, event bug_reported).
+   * Sent from here, not the browser, because ad blockers stopped the browser event. Only reports
+   * filed after this switch-over are sent; older ones are in Site admin > Bugs.
+   */
+  bugReportsFrom: "2026-10-01T04:30:00Z",
 };
 
 const EXIT_RE = /(voted\s*out|quit|medevac|removed)/i;
@@ -172,6 +188,28 @@ export function allEvents(snap: Snapshot): OutEvent[] {
 
   for (const p of snap.profiles) {
     out.push({ key: `user_signed_up:${p.id}`, userId: p.id, name: "user_signed_up", data: {} });
+  }
+
+  // Each new bug report, on the reporter's profile (the automation emails it to Brad)
+  const profileById = new Map(snap.profiles.map((p) => [p.id, p]));
+  const from = Date.parse(CONFIG.bugReportsFrom);
+  for (const b of snap.bugReports) {
+    const reporter = b.user_id ? profileById.get(b.user_id) : undefined;
+    if (!reporter || Date.parse(b.created_at) < from) continue;
+    out.push({
+      key: `bug_reported:${b.id}`,
+      userId: reporter.id,
+      name: "bug_reported",
+      data: {
+        description: b.description,
+        page_url: b.page_url,
+        league_id: b.league_id,
+        league_name: b.league_id ? leagueById.get(b.league_id)?.name ?? null : null,
+        reporter_email: reporter.email,
+        reporter_name: reporter.display_name,
+        reported_at: b.created_at,
+      },
+    });
   }
 
   for (const l of snap.leagues) {

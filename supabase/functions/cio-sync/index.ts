@@ -2,15 +2,17 @@
 // Runs every hour (pg_cron) and on demand from Site admin > Settings. Tells Customer.io, from the
 // server, what people are doing in the app: profile attributes (leagues, commissioner, league
 // stage) and events (signed up, league created/joined, season started, draft done, episode
-// scored). Only changes are sent. Nothing is sent until the site owner turns the sync on; the
-// first run after that only marks past activity as done, so nobody gets events for old things.
+// scored, bug reported). Only changes are sent. Nothing is sent until the site owner turns the sync
+// on; the first run after that only marks past activity as done, so nobody gets events for old things.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import {
   allEvents,
   attrsHash,
+  CONFIG,
   personAttributes,
   type Application,
+  type BugReport,
   type Contestant,
   type League,
   type Membership,
@@ -92,7 +94,16 @@ async function loadSnapshot(supabase: SupabaseClient, now: Date): Promise<Snapsh
   if (stageErr) throw new Error(`league stages: ${stageErr.message}`);
   const stages = new Map<string, Stage>(((stageRows as { league_id: string; stage: Stage }[]) || []).map((r) => [r.league_id, r.stage]));
 
-  return { now, currentSeason, leagues, memberships, sessions, teams, draftOrderCounts, contestants, events, applications, profiles, stages };
+  const bugReports = await loadAll<BugReport>((a, b) =>
+    supabase
+      .from("bug_reports")
+      .select("id, user_id, description, page_url, league_id, created_at")
+      .gte("created_at", CONFIG.bugReportsFrom)
+      .order("created_at", { ascending: true })
+      .range(a, b)
+  );
+
+  return { now, currentSeason, leagues, memberships, sessions, teams, draftOrderCounts, contestants, events, applications, profiles, stages, bugReports };
 }
 
 /** Customer.io Track API: identify (attributes) or event */
