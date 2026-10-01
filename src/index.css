@@ -5,7 +5,7 @@
 /* Survivors Ready design system: "Deep Jungle".
    Source of truth: Survivors Ready/design/design_handoff_survivors_ready/README.md
    All colors are HSL triplets so Tailwind's hsl(var(--x) / alpha) works.
-   Light is the default; dark follows the device setting. */
+   Dark is the default; people can switch to Light or Match my phone (footer). */
 
 @layer base {
   :root {
@@ -65,41 +65,41 @@
     --player-roy: 150 65% 50%;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: 147 26% 7%;          /* night canopy #0D1611 */
-      --foreground: 44 33% 87%;          /* bone #E9E3D3 */
-      --card: 145 21% 11%;               /* understory #16221B */
-      --card-foreground: 44 33% 87%;
-      --popover: 145 21% 11%;
-      --popover-foreground: 44 33% 87%;
+  /* Dark: the default. The app adds class="dark" to <html> unless the person picked Light
+     (or Match my phone with a light phone). See src/lib/theme.ts. */
+  .dark {
+    --background: 147 26% 7%;          /* night canopy #0D1611 */
+    --foreground: 44 33% 87%;          /* bone #E9E3D3 */
+    --card: 145 21% 11%;               /* understory #16221B */
+    --card-foreground: 44 33% 87%;
+    --popover: 145 21% 11%;
+    --popover-foreground: 44 33% 87%;
 
-      --primary: 44 33% 87%;             /* bone buttons on dark */
-      --primary-foreground: 147 26% 7%;
-      --secondary: 146 39% 62%;          /* fern #79C49A */
-      --secondary-foreground: 147 26% 7%;
-      --accent: 13 65% 54%;              /* clay #D6603F */
-      --accent-foreground: 147 26% 7%;
-      --destructive: 13 65% 54%;
-      --destructive-foreground: 147 26% 7%;
-      --success: 146 39% 62%;
-      --success-foreground: 147 26% 7%;
-      --warning: 43 62% 65%;             /* sun #DDBE6E */
-      --warning-foreground: 147 26% 7%;
+    --primary: 44 33% 87%;             /* bone buttons on dark */
+    --primary-foreground: 147 26% 7%;
+    --secondary: 146 39% 62%;          /* fern #79C49A */
+    --secondary-foreground: 147 26% 7%;
+    --accent: 13 65% 54%;              /* clay #D6603F */
+    --accent-foreground: 147 26% 7%;
+    --destructive: 13 65% 54%;
+    --destructive-foreground: 147 26% 7%;
+    --success: 146 39% 62%;
+    --success-foreground: 147 26% 7%;
+    --warning: 43 62% 65%;             /* sun #DDBE6E */
+    --warning-foreground: 147 26% 7%;
 
-      --muted: 142 22% 14%;              /* #1C2C22 */
-      --muted-foreground: 133 9% 60%;    /* lichen #8FA193 */
-      --border: 142 17% 18%;             /* card edge #26362C */
-      --input: 141 14% 24%;
-      --ring: 146 39% 62%;
+    --muted: 142 22% 14%;              /* #1C2C22 */
+    --muted-foreground: 133 9% 60%;    /* lichen #8FA193 */
+    --border: 142 17% 18%;             /* card edge #26362C */
+    --input: 141 14% 24%;
+    --ring: 146 39% 62%;
 
-      --plank-edge: 175 60% 4%;          /* #04100F */
-      --header-bg: 141 31% 11%;          /* #132419 */
-      --header-fg: 44 33% 87%;
+    --plank-edge: 175 60% 4%;          /* #04100F */
+    --header-bg: 141 31% 11%;          /* #132419 */
+    --header-fg: 44 33% 87%;
 
-      --gold: 43 62% 65%;
-      --mat: rgba(255, 255, 255, 0.018);
-    }
+    --gold: 43 62% 65%;
+    --mat: rgba(255, 255, 255, 0.018);
   }
 }
 

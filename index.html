@@ -16,8 +16,21 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Survivors Ready" />
-    <meta name="theme-color" content="#1D3326" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#132419" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#132419" />
+    <!-- Dark by default; Light / Match my phone are picked in the footer (src/lib/theme.ts). Runs before the page draws. -->
+    <script>
+      (function () {
+        var choice = "dark";
+        try {
+          var v = localStorage.getItem("sr-theme");
+          if (v === "dark" || v === "light" || v === "system") choice = v;
+        } catch (e) {}
+        var dark = choice === "dark" || (choice === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        if (!dark) document.querySelector('meta[name="theme-color"]').setAttribute("content", "#1D3326");
+      })();
+    </script>
 
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://survivorsready.com/og-image.png" />

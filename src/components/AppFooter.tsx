@@ -4,6 +4,39 @@ import { Bug } from "lucide-react";
 import { BugReportDialog } from "@/components/BugReportDialog";
 import { DonateButton } from "@/components/DonateButton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme, type ThemeChoice } from "@/lib/theme";
+
+const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
+  { value: "dark", label: "Dark" },
+  { value: "light", label: "Light" },
+  { value: "system", label: "Match my phone" },
+];
+
+/** Dark / Light / Match my phone. Remembered on this device. */
+function ThemeSwitch() {
+  const { choice, setChoice } = useTheme();
+  return (
+    <div role="radiogroup" aria-label="Appearance" className="flex items-center rounded-full border-2 border-plank p-0.5">
+      {THEME_OPTIONS.map((o) => {
+        const on = choice === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => setChoice(o.value)}
+            className={`min-h-[36px] rounded-full px-3 text-xs font-semibold transition-colors ${
+              on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export function AppFooter() {
   const [bugOpen, setBugOpen] = useState(false);
@@ -27,6 +60,7 @@ export function AppFooter() {
             <span className="text-border">|</span>
             <DonateButton />
           </div>
+          <ThemeSwitch />
           <p className="text-center text-[11px] leading-tight text-muted-foreground">
             Survivors Ready is a free fan game. Not affiliated with CBS or the show.
           </p>
