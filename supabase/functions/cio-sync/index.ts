@@ -11,6 +11,7 @@ import {
   attrsHash,
   CONFIG,
   personAttributes,
+  planSend,
   type Application,
   type BugReport,
   type Contestant,
@@ -190,7 +191,7 @@ Deno.serve(async (req) => {
         (await loadAll<{ user_id: string; attrs_hash: string }>((a, b) => supabase.from("cio_person_state").select("user_id, attrs_hash").range(a, b))).map((r) => [r.user_id, r.attrs_hash])
       );
       const firstRun = sent.size === 0;
-      const newEvents = firstRun ? [] : events.filter((e) => !sent.has(e.key));
+      const newEvents = firstRun ? [] : planSend(events.filter((e) => !sent.has(e.key))).send;
       const changed = people.filter((p) => state.get(p.userId) !== attrsHash(p.attrs));
       return json({
         ok: true,
@@ -258,8 +259,16 @@ Deno.serve(async (req) => {
       }
       marked = rows.length;
     } else {
-      const batch = fresh.slice(0, Math.max(0, budget));
-      const done: { event_key: string; user_id: string; name: string; sent: boolean }[] = [];
+      // Catch-up scoring: only the newest episode's recap per person; the rest are marked done
+      const plan = planSend(fresh);
+      const batch = plan.send.slice(0, Math.max(0, budget));
+      const done: { event_key: string; user_id: string; name: string; sent: boolean }[] = plan.skip.map((e) => ({
+        event_key: e.key,
+        user_id: e.userId,
+        name: e.name,
+        sent: false,
+      }));
+      marked = plan.skip.length;
       eventsOk = await pool(
         batch.map((e) => async () => {
           const ok = await cio(apiKey, `${encodeURIComponent(e.userId)}/events`, "POST", { name: e.name, data: e.data });
@@ -272,10 +281,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    const failed = changed.length - attrsOk + (firstRun ? 0 : Math.min(fresh.length, Math.max(0, budget)) - eventsOk);
+    const toSend = firstRun ? 0 : Math.min(planSend(fresh).send.length, Math.max(0, budget));
+    const failed = changed.length - attrsOk + (firstRun ? 0 : toSend - eventsOk);
     const summary = firstRun
       ? `First run: updated ${attrsOk} profiles; marked ${marked} past events as done (not sent).`
-      : `Updated ${attrsOk} profiles; sent ${eventsOk} events${failed > 0 ? `; ${failed} failed, retrying next hour` : ""}.`;
+      : `Updated ${attrsOk} profiles; sent ${eventsOk} events${marked > 0 ? `; skipped ${marked} older recaps` : ""}${failed > 0 ? `; ${failed} failed, retrying next hour` : ""}.`;
     await finishLog({
       ok: failed === 0,
       summary,

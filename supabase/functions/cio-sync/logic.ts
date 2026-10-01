@@ -81,6 +81,12 @@ export const CONFIG = {
   /** ...and nothing new was added for this long */
   scoredQuietHours: 12,
   /**
+   * An episode applied from the results card counts as scored this long after it was applied.
+   * Recaps go out at 9am anyway; the wait lets a league that catches up several episodes in a
+   * row get one recap (the newest episode) instead of one per episode.
+   */
+  appliedSettleHours: 2,
+  /**
    * Bug reports go to Brad by email ("Bug report → Brad" in Customer.io, event bug_reported).
    * Sent from here, not the browser, because ad blockers stopped the browser event. Only reports
    * filed after this switch-over are sent; older ones are in Site admin > Bugs.
@@ -328,9 +334,42 @@ export function allEvents(snap: Snapshot): OutEvent[] {
   return out;
 }
 
+/**
+ * Of the new events, which to send and which to just mark done (never sent):
+ * - the same key twice: once
+ * - a league catching up several episodes at once: only the newest episode's recap per person
+ * - a league scoring its finale along with earlier episodes: just the wrap-up, no recaps
+ */
+export function planSend(fresh: OutEvent[]): { send: OutEvent[]; skip: OutEvent[] } {
+  const seen = new Set<string>();
+  const unique = fresh.filter((e) => (seen.has(e.key) ? false : (seen.add(e.key), true)));
+  const sessionUser = (e: OutEvent) => `${e.key.split(":")[1]}:${e.userId}`;
+  const wrapUps = new Set(unique.filter((e) => e.name === "season_completed").map(sessionUser));
+  const newest = new Map<string, number>();
+  for (const e of unique) {
+    if (e.name !== "episode_scored") continue;
+    const k = sessionUser(e);
+    newest.set(k, Math.max(newest.get(k) ?? 0, Number(e.data.episode) || 0));
+  }
+  const send: OutEvent[] = [];
+  const skip: OutEvent[] = [];
+  for (const e of unique) {
+    if (e.name === "episode_scored") {
+      const k = sessionUser(e);
+      if (wrapUps.has(k) || (Number(e.data.episode) || 0) !== newest.get(k)) {
+        skip.push(e);
+        continue;
+      }
+    }
+    send.push(e);
+  }
+  return { send, skip };
+}
+
 /** Episodes a league is done scoring: applied from the results card, or hand-scored and quiet. */
 export function scoredEpisodes(evs: ScoringEvent[], apps: Application[], now: Date): number[] {
-  const done = new Set(apps.map((a) => a.episode));
+  const settled = now.getTime() - CONFIG.appliedSettleHours * 36e5;
+  const done = new Set(apps.filter((a) => (Date.parse(a.applied_at) || 0) <= settled).map((a) => a.episode));
   const byEp = groupBy(evs, (e) => String(e.episode));
   for (const [ep, list] of byEp) {
     const newest = Math.max(...list.map((e) => Date.parse(e.created_at) || 0));
