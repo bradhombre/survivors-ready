@@ -89,6 +89,7 @@ export const CONFIG = {
 };
 
 const EXIT_RE = /(voted\s*out|quit|medevac|removed)/i;
+const WINNER_RE = /win survivor/i;
 
 /** The newest session of each league (same rule as Site admin league health) */
 export function currentSessions(sessions: Session[]): Map<string, Session> {
@@ -137,6 +138,15 @@ export function personAttributes(snap: Snapshot): PersonAttrs[] {
       return cb - ca || Date.parse(b.created_at) - Date.parse(a.created_at);
     })[0];
     const first = (p.display_name || "").trim().split(/\s+/)[0] || null;
+    // A league they're in that hasn't started the current season yet (still on an older season).
+    // Most recently active first. Used for "your league hasn't started yet" and new-season emails.
+    const unstarted = mine
+      .map((m) => leagueById.get(m.league_id)!)
+      .filter((l) => {
+        const s = cur.get(l.id);
+        return snap.currentSeason !== null && (!s || s.season !== snap.currentSeason);
+      })
+      .sort((a, b) => Date.parse(b.last_activity_at || b.created_at) - Date.parse(a.last_activity_at || a.created_at))[0];
     return {
       userId: p.id,
       attrs: {
@@ -151,6 +161,10 @@ export function personAttributes(snap: Snapshot): PersonAttrs[] {
         league_id: pick ? pick.id : null,
         league_name: pick ? pick.name : null,
         league_members: pick ? memberCount.get(pick.id) || 0 : null,
+        has_unstarted_league: !!unstarted,
+        unstarted_league_id: unstarted ? unstarted.id : null,
+        unstarted_league_name: unstarted ? unstarted.name : null,
+        unstarted_league_is_mine: unstarted ? commissionerOf.includes(unstarted.id) : null,
       },
     };
   });
@@ -257,11 +271,37 @@ export function allEvents(snap: Snapshot): OutEvent[] {
       }
     }
 
-    // Episodes this league has finished scoring
+    // Episodes this league has finished scoring. The finale (the episode with the "Win Survivor"
+    // event) gets a season wrap-up instead of a weekly recap.
     const evs = eventsBySession.get(s.id) || [];
     const apps = (appsBySession.get(s.id) || []).filter((a) => !a.skipped);
+    const finaleEp = evs.filter((e) => WINNER_RE.test(e.action)).reduce((mx, e) => Math.max(mx, e.episode), 0) || null;
     for (const ep of scoredEpisodes(evs, apps, snap.now)) {
       const standings = standingsAfter(evs, cast, ep);
+      if (finaleEp !== null && ep === finaleEp) {
+        const top = standings.filter((r) => r.rank === 1).map((r) => r.team);
+        for (const m of members) {
+          const team = teamOf(m.user_id);
+          const row = team ? standings.find((r) => r.team === team) : undefined;
+          out.push({
+            key: `season_completed:${s.id}:${m.user_id}`,
+            userId: m.user_id,
+            name: "season_completed",
+            data: {
+              ...seasonData,
+              finale_episode: ep,
+              team_name: team,
+              rank: row?.rank ?? null,
+              teams: standings.length,
+              total_points: row?.total ?? 0,
+              champion_team: top.join(" & ") || null,
+              champion_points: standings[0]?.total ?? 0,
+              is_champion: !!row && row.rank === 1,
+            },
+          });
+        }
+        continue;
+      }
       for (const m of members) {
         const team = teamOf(m.user_id);
         const row = team ? standings.find((r) => r.team === team) : undefined;
