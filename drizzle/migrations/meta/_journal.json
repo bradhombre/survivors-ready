@@ -50,6 +50,13 @@
       "when": 1790727839615,
       "tag": "0006_auto_episode_results",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790825820080,
+      "tag": "0007_cio_sync",
+      "breakpoints": true
     }
   ]
 }

@@ -155,6 +155,72 @@ export type Database = {
           },
         ]
       }
+      cio_person_state: {
+        Row: {
+          attrs_hash: string
+          synced_at: string
+          user_id: string
+        }
+        Insert: {
+          attrs_hash: string
+          synced_at?: string
+          user_id: string
+        }
+        Update: {
+          attrs_hash?: string
+          synced_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cio_sent_events: {
+        Row: {
+          created_at: string
+          event_key: string
+          name: string
+          sent: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_key: string
+          name: string
+          sent?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_key?: string
+          name?: string
+          sent?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cio_sync_log: {
+        Row: {
+          details: Json
+          id: number
+          ok: boolean
+          ran_at: string
+          summary: string | null
+        }
+        Insert: {
+          details?: Json
+          id?: number
+          ok?: boolean
+          ran_at?: string
+          summary?: string | null
+        }
+        Update: {
+          details?: Json
+          id?: number
+          ok?: boolean
+          ran_at?: string
+          summary?: string | null
+        }
+        Relationships: []
+      }
       contestants: {
         Row: {
           age: number | null
@@ -950,6 +1016,13 @@ export type Database = {
           _skipped?: boolean
         }
         Returns: number
+      }
+      cio_league_stages: {
+        Args: never
+        Returns: {
+          league_id: string
+          stage: string
+        }[]
       }
       claim_team: {
         Args: { team_id: string }
