@@ -1,3 +1,4 @@
+// Auto-scoring results card: one episode at a time (Add, Skip, or hide until the next episode).
 import { useEffect, useMemo, useState } from "react";
 import { confirmDialog } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
