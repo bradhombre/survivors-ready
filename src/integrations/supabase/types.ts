@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -685,6 +685,7 @@ export type Database = {
           allow_player_scoring: boolean
           archived_at: string | null
           auto_renew: boolean
+          auto_scoring: boolean
           created_at: string | null
           id: string
           invite_code: string
@@ -699,6 +700,7 @@ export type Database = {
           allow_player_scoring?: boolean
           archived_at?: string | null
           auto_renew?: boolean
+          auto_scoring?: boolean
           created_at?: string | null
           id?: string
           invite_code: string
@@ -713,6 +715,7 @@ export type Database = {
           allow_player_scoring?: boolean
           archived_at?: string | null
           auto_renew?: boolean
+          auto_scoring?: boolean
           created_at?: string | null
           id?: string
           invite_code?: string
@@ -1048,6 +1051,7 @@ export type Database = {
           allow_player_scoring: boolean
           archived_at: string | null
           auto_renew: boolean
+          auto_scoring: boolean
           created_at: string | null
           id: string
           invite_code: string

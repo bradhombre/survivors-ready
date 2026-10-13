@@ -57,6 +57,13 @@
       "when": 1790825820080,
       "tag": "0007_cio_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791860136147,
+      "tag": "0008_league_auto_scoring",
+      "breakpoints": true
     }
   ]
 }
