@@ -15,11 +15,18 @@ const NOT_IN_LEAGUE = "__none__";
 const range = (eps: number[]) =>
   eps.length === 1 ? `episode ${eps[0]}` : `episodes ${Math.min(...eps)}–${Math.max(...eps)}`;
 
-/** The "started after" answers at the top of the league's history, newest first (undone together). */
+/**
+ * Skipped episodes saved together in one answer ("take them out before the draft"), newest first,
+ * so they're undone together. Episodes skipped one at a time on the card are undone one at a time.
+ */
 export function skippedRun(applications: Map<number, Application>): Application[] {
   const out: Application[] = [];
+  let newestAt = 0;
   for (const a of [...applications.values()].sort((x, y) => y.episode - x.episode)) {
     if (!a.skipped) break;
+    const at = Date.parse(a.applied_at) || 0;
+    if (out.length === 0) newestAt = at;
+    else if (Math.abs(newestAt - at) > 60_000) break; // saved separately
     out.push(a);
   }
   return out;
