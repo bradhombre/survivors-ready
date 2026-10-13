@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Shield, Trash2, UserPlus, AlertTriangle, RefreshCw, Edit, Users, Settings, Scale, Database } from 'lucide-react';
 import { ScoringSettings } from './ScoringSettings';
+import { AutoScoringSetting } from './admin/AutoScoringSetting';
 import { SetupMode } from './SetupMode';
 import { Contestant, DraftType, Player } from '@/types/survivor';
 import { draftPoolSize, getPicksPerTeam } from '@/lib/picksPerTeam';
@@ -54,6 +55,8 @@ type AdminPanelProps = {
   onNewSeason?: () => void;
   onRevertToSetup?: () => void;
   onScoringConfigSaved?: (config: any) => void;
+  /** Auto-scoring turned on or off in Admin > Scoring */
+  onAutoScoringChange?: (on: boolean) => void;
 };
 
 export function AdminPanel({ 
@@ -84,6 +87,7 @@ export function AdminPanel({
   onNewSeason,
   onRevertToSetup,
   onScoringConfigSaved,
+  onAutoScoringChange,
 }: AdminPanelProps) {
   const [selectedEpisode, setSelectedEpisode] = useState(currentEpisode);
   const [isLoading, setIsLoading] = useState(false);
@@ -316,7 +320,10 @@ export function AdminPanel({
                 </div>
               </div>
             ) : (
-              <ScoringSettings leagueId={leagueId} onScoringConfigSaved={onScoringConfigSaved} />
+              <>
+                <AutoScoringSetting leagueId={leagueId} onChange={onAutoScoringChange} />
+                <ScoringSettings leagueId={leagueId} onScoringConfigSaved={onScoringConfigSaved} />
+              </>
             )}
           </div>
         </TabsContent>

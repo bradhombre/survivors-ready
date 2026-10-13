@@ -10,19 +10,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { AlertTriangle, Sparkles, Undo2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, Sparkles, Undo2, X } from "lucide-react";
 import type { Contestant, ScoringEvent } from "@/types/survivor";
 import type { ScoringConfig } from "@/lib/scoring";
-import {
-  askIfEpisodeCounts,
-  buildEpisodePlan,
-  nextPendingEpisode,
-  pendingEpisodes,
-  pointsByTeam,
-  type ActionKey,
-} from "@/lib/episodeResults";
+import { buildEpisodePlan, nextPendingEpisode, pointsByTeam, type ActionKey } from "@/lib/episodeResults";
 import { useLeagueEpisodeResults } from "@/hooks/useEpisodeResults";
-import { StartEpisodePicker, skippedRun, undoSkippedRun } from "@/components/StartEpisodePicker";
+import { skippedRun, undoSkippedRun } from "@/components/StartEpisodePicker";
 
 /** "Aubry ×2, Joe ×2" (the finale gives finalists two survival rounds) */
 const namesWithCounts = (names: string[]) =>
@@ -62,8 +55,11 @@ const fmt = (n: number) => (n > 0 ? `+${n}` : String(n));
 const NOT_IN_LEAGUE = "__none__";
 
 /**
- * Commissioner-only card: "Episode N results are in". One tap adds the big events the site
- * owner entered (voted out, survived, immunity, jury, finale), skipping anything already there.
+ * Commissioner-only card: "Episode N results are in", one episode at a time, in order.
+ * Add: one tap adds the big events (voted out, survived, immunity, jury, finale), skipping
+ * anything already entered. Skip: no points, but whoever went home is still marked out.
+ * The X hides the card until the next episode is posted (remembered on this device), so
+ * leagues that watch later aren't nagged. Leagues can turn auto-scoring off in Admin > Scoring.
  */
 export function EpisodeResultsCard({
   season,
@@ -78,6 +74,27 @@ export function EpisodeResultsCard({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [howOpen, setHowOpen] = useState(false);
+
+  // "Hide until the next episode": remembers the newest episode that was posted when hidden
+  const hideKey = `sr-er-hidden-${sessionId}`;
+  const newestPosted = useMemo(() => Math.max(0, ...results.map((r) => r.episode)), [results]);
+  const [hiddenThrough, setHiddenThrough] = useState<number>(() => {
+    try {
+      return Number(localStorage.getItem(hideKey)) || 0;
+    } catch {
+      return 0;
+    }
+  });
+  const hide = () => {
+    try {
+      localStorage.setItem(hideKey, String(newestPosted));
+    } catch {
+      // private window: hidden for this visit only
+    }
+    setHiddenThrough(newestPosted);
+  };
+  const hidden = newestPosted > 0 && hiddenThrough >= newestPosted;
 
   const handled = useMemo(() => new Set(applications.keys()), [applications]);
   const skipped = useMemo(
@@ -125,13 +142,7 @@ export function EpisodeResultsCard({
     return eps[0];
   }, [applications, results]);
 
-  // Until the league counts an episode through the card, ask which episode it started with.
-  // Lots of leagues draft after the premiere; some want those points, some don't.
-  const firstEpisodeForLeague = askIfEpisodeCounts({
-    applications: [...applications.values()],
-    publishedAt: results.find((r) => r.episode === next)?.published_at,
-  });
-  // "We started with episode K" answers at the top, undone together
+  // Episodes skipped together before the draft ("take them out"), undone together
   const run = skippedRun(applications);
 
   if (!ok) return null;
@@ -144,8 +155,8 @@ export function EpisodeResultsCard({
     const ok = await confirmDialog(
       wasSkipped
         ? {
-            title: `Undo "no points for ${span}"?`,
-            description: `${eps.length === 1 ? "It comes" : "They come"} back so you can count ${eps.length === 1 ? "it" : "them"} or pick a different first episode.`,
+            title: `Undo skipping ${span}?`,
+            description: `${eps.length === 1 ? "It comes" : "They come"} back on the card so you can add the points or skip again.`,
             confirmText: "Undo",
           }
         : {
@@ -174,9 +185,9 @@ export function EpisodeResultsCard({
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 sm:px-6 text-sm text-muted-foreground border-t-2 border-border">
       <span className="tabular">
         {lastApplied.skipped
-          ? run.length > 1
-            ? `Episodes ${Math.min(...run.map((a) => a.episode))}–${lastApplied.episode}: no points (your league started with episode ${lastApplied.episode + 1}).`
-            : `Episode ${lastApplied.episode}: no points (your league started after it).`
+          ? run.length > 1 && run.some((a) => a.episode === lastApplied.episode)
+            ? `Episodes ${Math.min(...run.map((a) => a.episode))}–${lastApplied.episode} skipped: no points.`
+            : `Episode ${lastApplied.episode} skipped: no points.`
           : lastApplied.events_added > 0
           ? `Episode ${lastApplied.episode} was auto-scored (${lastApplied.events_added} ${lastApplied.events_added === 1 ? "event" : "events"}).`
           : `Episode ${lastApplied.episode} was marked done.`}
@@ -262,9 +273,15 @@ export function EpisodeResultsCard({
     );
   }
 
-  // A new league with several episodes waiting picks its first episode in one step
-  const pendingList = pendingEpisodes(results, handled);
-  const pickFirstEpisode = firstEpisodeForLeague && pendingList.length > 1;
+  // Hidden until the next episode is posted (a correction notice still shows)
+  if (hidden && !open) {
+    if (corrected === undefined) return null;
+    return (
+      <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
+        <div className="plank overflow-hidden">{correctedLine}</div>
+      </div>
+    );
+  }
 
   const grouped = GROUPS.map((g) => ({ ...g, events: plan.events.filter((e) => e.key === g.key) })).filter(
     (g) => g.events.length > 0
@@ -318,11 +335,12 @@ export function EpisodeResultsCard({
     }
     const out = plan.eliminate.length;
     const ok = await confirmDialog({
-      title: `No points for episode ${plan.episode}?`,
+      title: `Skip episode ${plan.episode}?`,
       description:
-        (out > 0 ? `${out === 1 ? "The castaway who went home is" : `The ${out} castaways who went home are`} marked out of your league. ` : "") +
-        "You can undo this for 2 days.",
-      confirmText: `We started after episode ${plan.episode}`,
+        "No points for it. " +
+        (out > 0 ? `${out === 1 ? "The castaway who went home is" : `The ${out} castaways who went home are`} still marked out of your league. ` : "") +
+        "Use this for an episode your league didn't play, like one before you started. You can undo it for 2 days.",
+      confirmText: `Skip episode ${plan.episode}`,
     });
     if (!ok) return;
     setBusy(true);
@@ -331,7 +349,7 @@ export function EpisodeResultsCard({
       await refresh();
       setOpen(false);
       const ep = plan.episode;
-      toast.success(out > 0 ? `Episode ${ep}: marked who left, no points added` : `Episode ${ep}: no points added`, {
+      toast.success(out > 0 ? `Episode ${ep} skipped. Marked who went home, no points added.` : `Episode ${ep} skipped. No points added.`, {
         action: out > 0 ? { label: "Undo", onClick: () => undo(ep) } : undefined,
       });
     } catch (err: any) {
@@ -347,65 +365,72 @@ export function EpisodeResultsCard({
     <div className="container max-w-7xl mx-auto px-4 md:px-8 mt-4">
       <section className="plank overflow-hidden" aria-live="polite">
         <div className="bg-header px-5 py-4 sm:px-6">
-          <p className="label-caps text-header-label flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            Auto-scoring
-          </p>
-          <h2 className="font-display text-3xl leading-none mt-1">
-            {pickFirstEpisode ? `Episodes ${plan.episode}–${pendingList[pendingList.length - 1]} results are in` : `Episode ${plan.episode} results are in`}
-          </h2>
-          {pickFirstEpisode ? (
-            <p className="mt-2 text-sm text-header-label max-w-[60ch]">
-              Which episode did your league start with? Episodes before it get no points. We'll just mark who went home
-              in them so they're out of your league. From your first episode on, you review and count each one.
+          <div className="flex items-start justify-between gap-3">
+            <p className="label-caps text-header-label flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              Auto-scoring
             </p>
-          ) : firstEpisodeForLeague ? (
-            <div className="mt-2 space-y-1.5 text-sm text-header-label max-w-[60ch]">
-              <p className="font-bold">Did your league start before episode {plan.episode} aired?</p>
-              <p>
-                <b>Count episode {plan.episode}:</b> your teams get points for it.
-              </p>
-              <p>
-                <b>We started after episode {plan.episode}:</b> no points for it. We'll just mark who went home so they're out
-                of your league.
-              </p>
-            </div>
-          ) : (
-            <p className="mt-2 text-sm text-header-label max-w-[60ch]">
-              Voted out, survival points and immunity, ready to add in one tap. Review first; the details are spoilers.
-            </p>
-          )}
-        </div>
-        {pickFirstEpisode ? (
-          <div className="px-5 py-4 sm:px-6">
-            <StartEpisodePicker
-              results={results}
-              handled={handled}
-              contestants={contestants}
-              scoringEvents={scoringEvents}
-              scoringConfig={scoringConfig}
-              onApply={onApply}
-              refresh={refresh}
-              onCountFirst={() => setOpen(true)}
-            />
+            <button
+              type="button"
+              onClick={hide}
+              aria-label="Hide until the next episode is posted"
+              title="Hide until the next episode is posted"
+              className="-mr-2 -mt-2 inline-flex h-10 w-10 items-center justify-center rounded-full text-header-label hover:opacity-80"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
           </div>
-        ) : (
-        <div className="flex flex-wrap items-center gap-3 px-5 py-3 sm:px-6">
+          <h2 className="font-display text-3xl leading-none mt-1">Episode {plan.episode} results are in</h2>
+          <p className="mt-2 text-sm text-header-label max-w-[60ch]">
+            Who went home, who won immunity and survival points, ready to add in one tap. Watching later? Tap the X and this
+            comes back when the next episode is posted.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 px-5 pt-4 sm:px-6">
           <Button variant="accent" className="h-11" onClick={() => setOpen(true)}>
-            {firstEpisodeForLeague ? `Count episode ${plan.episode}` : "Review and apply"}
+            Add episode {plan.episode} points
           </Button>
-          {firstEpisodeForLeague && (
-            <Button variant="outline" className="h-11" onClick={skip} disabled={busy}>
-              We started after episode {plan.episode}
-            </Button>
-          )}
+          <Button variant="outline" className="h-11" onClick={skip} disabled={busy}>
+            Skip episode {plan.episode}
+          </Button>
           {waiting > 1 && (
             <span className="text-sm font-semibold text-muted-foreground tabular">
-              {waiting - 1} more episode{waiting > 2 ? "s" : ""} waiting after this one
+              {waiting - 1} more episode{waiting > 2 ? "s" : ""} after this one
             </span>
           )}
         </div>
-        )}
+        <div className="px-5 pb-3 pt-2 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setHowOpen((v) => !v)}
+            aria-expanded={howOpen}
+            className="inline-flex min-h-[40px] items-center gap-1 text-sm font-bold underline underline-offset-2"
+          >
+            How auto-scoring works
+            <ChevronDown className={`h-4 w-4 transition-transform ${howOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+          </button>
+          {howOpen && (
+            <ul className="mt-1 max-w-[65ch] list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+              <li>After each episode airs, we post the results here, usually by the next morning.</li>
+              <li>
+                Nothing changes in your league until you tap Add. You'll see exactly what gets added first (that list has
+                spoilers), and you can undo it for 2 days.
+              </li>
+              <li>
+                Skip an episode your league didn't play, like one before you started. No points, but anyone who went home is
+                still marked out.
+              </li>
+              <li>
+                Episodes wait for you in order, so you can catch up whenever you watch. The X hides this card until the next
+                episode is posted.
+              </li>
+              <li>
+                Cries, Jeff tosses, idols and bonuses stay manual. Prefer to score everything by hand? Turn auto-scoring off in
+                Admin, under Scoring.
+              </li>
+            </ul>
+          )}
+        </div>
         {correctedLine}
         {undoLine}
       </section>
@@ -518,11 +543,9 @@ export function EpisodeResultsCard({
           </div>
 
           <DialogFooter className="gap-2">
-            {firstEpisodeForLeague && (
-              <Button variant="ghost" className="h-11" onClick={skip} disabled={busy || needsPicks.length > 0}>
-                We started after this episode
-              </Button>
-            )}
+            <Button variant="ghost" className="h-11" onClick={skip} disabled={busy || needsPicks.length > 0}>
+              Skip this episode
+            </Button>
             <Button variant="accent" className="h-11" onClick={apply} disabled={busy || needsPicks.length > 0}>
               {busy
                 ? "Adding…"

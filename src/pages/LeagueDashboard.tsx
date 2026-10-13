@@ -138,6 +138,21 @@ const LeagueDashboard = () => {
     fetchLeague();
   }, [leagueId, navigate]);
 
+  // Auto-scoring on/off (Admin > Scoring). Read on its own so a database without the column
+  // yet just keeps the default (on) instead of failing the league load.
+  const [autoScoring, setAutoScoring] = useState(true);
+  useEffect(() => {
+    if (!leagueId) return;
+    (supabase as any)
+      .from('leagues')
+      .select('auto_scoring')
+      .eq('id', leagueId)
+      .maybeSingle()
+      .then(({ data, error }: { data: { auto_scoring?: boolean } | null; error: unknown }) => {
+        if (!error && data) setAutoScoring(data.auto_scoring !== false);
+      });
+  }, [leagueId]);
+
 
   // Determine draft/game state (must be before early returns for hooks)
   const computedPicksPerTeam = getPicksPerTeam(state.picksPerTeam, state.gameType, draftPoolSize(state.contestants), state.draftOrder.length);
@@ -407,7 +422,7 @@ const LeagueDashboard = () => {
       {viewMode === "draft" && !canShowGame && (
         <>
           {/* Starting mid-season: take castaways who already went home out of the draft */}
-          {leagueRole === "league_admin" && state.gameType !== "winner_takes_all" && (
+          {leagueRole === "league_admin" && autoScoring && state.gameType !== "winner_takes_all" && (
             <LateStartCard
               season={state.season}
               sessionId={sessionId || undefined}
@@ -468,7 +483,7 @@ const LeagueDashboard = () => {
         <>
           <GameplayTips leagueId={leagueId!} />
           {/* Auto-scoring card: commissioners of this league only (not the site owner browsing other leagues) */}
-          {leagueRole === "league_admin" && canShowGame && state.gameType !== "winner_takes_all" && (
+          {leagueRole === "league_admin" && autoScoring && canShowGame && state.gameType !== "winner_takes_all" && (
             <EpisodeResultsCard
               season={state.season}
               sessionId={sessionId || undefined}
@@ -572,6 +587,7 @@ const LeagueDashboard = () => {
             onResetAll={resetAll}
             onRevertToSetup={revertToSetup}
             onScoringConfigSaved={setScoringConfig}
+            onAutoScoringChange={setAutoScoring}
             onNewSeason={openNewSeasonDialog}
           />
         </div>
