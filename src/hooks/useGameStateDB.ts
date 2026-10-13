@@ -791,6 +791,16 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
       _post_merge: postMerge,
       _skipped: skipped,
     });
+    // Nothing new to add means the episode was already scored by hand: the league is done with it,
+    // so move on to the next episode (only forward, never back). When points were added, the league
+    // stays on this episode so hand-scored extras (cries, Jeff tosses, idols) land on the right week.
+    if (!error && !skipped && ((data as number) ?? 0) === 0) {
+      await supabase
+        .from("game_sessions")
+        .update({ episode: episode + 1 })
+        .eq("id", sessionId)
+        .lt("episode", episode + 1);
+    }
     await loadGameState(sessionId);
     if (error) throw error;
     return (data as number) ?? 0;

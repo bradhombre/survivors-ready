@@ -190,7 +190,7 @@ export function EpisodeResultsCard({
             : `Episode ${lastApplied.episode} skipped: no points.`
           : lastApplied.events_added > 0
           ? `Episode ${lastApplied.episode} was auto-scored (${lastApplied.events_added} ${lastApplied.events_added === 1 ? "event" : "events"}).`
-          : `Episode ${lastApplied.episode} was marked done.`}
+          : `Episode ${lastApplied.episode} was already scored, so nothing new was added.`}
       </span>
       <button
         type="button"
@@ -310,7 +310,7 @@ export function EpisodeResultsCard({
       await refresh();
       setOpen(false);
       const ep = plan.episode;
-      toast.success(added > 0 ? `Episode ${ep} scored: ${added} ${added === 1 ? "event" : "events"} added` : `Episode ${ep} marked done`, {
+      toast.success(added > 0 ? `Episode ${ep} scored: ${added} ${added === 1 ? "event" : "events"} added` : `Episode ${ep} was already scored, so nothing new was added. Moving you to episode ${ep + 1}.`, {
         action: added > 0 ? { label: "Undo", onClick: () => undo(ep) } : undefined,
       });
     } catch (err: any) {
