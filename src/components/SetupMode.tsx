@@ -160,6 +160,9 @@ export const SetupMode = ({
   // Keep draft order aligned with team slots when league size changes (preserve any manual reordering)
   useEffect(() => {
     if (teams.length === 0) return;
+    // Once anyone has drafted, castaways are linked to the draft order's names. Don't rewrite it
+    // (a team renamed outside this screen would lose its castaways and points).
+    if (contestants.some((c) => c.owner)) return;
 
     const teamNames = teams.map((t) => t.name);
     const current = draftOrder as string[];
@@ -177,7 +180,7 @@ export const SetupMode = ({
     });
 
     onSetDraftOrder(merged as Player[]);
-  }, [teams, draftOrder, onSetDraftOrder]);
+  }, [teams, draftOrder, onSetDraftOrder, contestants]);
 
   const handleRenameTeam = async (teamId: string, oldName: string) => {
     const trimmedName = editTeamName.trim();

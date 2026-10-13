@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { renameTeamEverywhere } from '@/lib/renameTeam';
 import {
   Dialog,
   DialogContent,
@@ -83,6 +84,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
   // Step 4 state - Team customization
   const [teamId, setTeamId] = useState<string | null>(null);
   const [teamName, setTeamName] = useState('');
+  const [originalTeamName, setOriginalTeamName] = useState('');
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [savingTeam, setSavingTeam] = useState(false);
 
@@ -101,6 +103,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
       setImportedCount(null);
       setTeamId(null);
       setTeamName('');
+      setOriginalTeamName('');
       setTeamAvatarUrl(null);
     }
   }, [open, defaultSeason]);
@@ -163,6 +166,7 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
         if (teamData) {
           setTeamId(teamData.id);
           setTeamName(teamData.name);
+          setOriginalTeamName(teamData.name);
           setTeamAvatarUrl((teamData as any).avatar_url || null);
         }
       }
@@ -271,10 +275,13 @@ export function CreateLeagueDialog({ open, onOpenChange, onSuccess }: CreateLeag
     if (!teamId || !teamName.trim()) return;
     
     setSavingTeam(true);
-    const { error } = await supabase
-      .from('league_teams')
-      .update({ name: teamName.trim() })
-      .eq('id', teamId);
+    let error: unknown = null;
+    try {
+      // Renames the team's castaways and draft slot too (they're linked by name)
+      await renameTeamEverywhere(leagueId!, teamId, originalTeamName, teamName.trim());
+    } catch (e) {
+      error = e;
+    }
 
     if (error) {
       toast.error('Failed to update team name');

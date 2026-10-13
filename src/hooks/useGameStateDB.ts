@@ -499,8 +499,22 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     await setDraftOrder(shuffled);
   };
 
+  // Latest state for callbacks that shouldn't re-create on every change
+  const latestStateRef = useRef(state);
+  latestStateRef.current = state;
+
   const setDraftOrder = useCallback(async (draftOrder: Player[]) => {
     if (!sessionId) return;
+
+    // Castaways are linked to teams by name. Never drop a name from the draft order while it still
+    // owns castaways: that team would vanish from the standings with 0 points (the 10/12 bug).
+    const { contestants, draftOrder: current } = latestStateRef.current;
+    const owners = new Set(contestants.map((c) => c.owner).filter(Boolean) as string[]);
+    const dropping = (current as string[]).filter((n) => owners.has(n) && !(draftOrder as string[]).includes(n));
+    if (dropping.length > 0) {
+      console.warn("Kept draft order: these teams still own castaways", dropping);
+      return;
+    }
 
     // Optimistic UI update so buttons feel responsive even if realtime isn't firing
     setState((prev) => ({ ...prev, draftOrder }));

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { renameTeamEverywhere } from '@/lib/renameTeam';
 import {
   Dialog,
   DialogContent,
@@ -118,10 +119,13 @@ export function JoinLeagueDialog({ open, onOpenChange, onSuccess }: JoinLeagueDi
     if (!teamId || !teamName.trim()) return;
     
     setSavingTeam(true);
-    const { error } = await supabase
-      .from('league_teams')
-      .update({ name: teamName.trim() })
-      .eq('id', teamId);
+    let error: unknown = null;
+    try {
+      // Renames the team's castaways and draft slot too (they're linked by name)
+      await renameTeamEverywhere(leagueId!, teamId, originalTeamName, teamName.trim());
+    } catch (e) {
+      error = e;
+    }
 
     if (error) {
       toast.error('Failed to update team name');
