@@ -14,12 +14,22 @@ interface Prediction {
   is_revealed: boolean;
 }
 
+// Points for a correct tribal prediction. Fixed for now on purpose: the league's "Tribal Vote
+// Correct" setting is used by most leagues for castaways who vote with the majority, not for
+// this game, so predictions get their own setting when they move to team bonuses.
+const PREDICTION_POINTS = 5;
+
 interface FinalPredictionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sessionId: string;
   episode: number;
+  /** Castaways still in the game (what players can predict) */
   finalists: Contestant[];
+  /** Every castaway, including anyone already marked out (e.g. by auto-scoring) */
+  allContestants: Contestant[];
+  /** The league's points for Voted Out */
+  votedOutPoints: number;
   isAdmin: boolean;
   playerName: string | null;
   players: string[];
@@ -32,6 +42,8 @@ export const FinalPredictionDialog = ({
   sessionId,
   episode,
   finalists,
+  allContestants,
+  votedOutPoints,
   isAdmin,
   playerName,
   players,
@@ -198,46 +210,54 @@ export const FinalPredictionDialog = ({
       return;
     }
 
-    // Check if all predictions are the same
-    const uniquePredictions = new Set(predictions.map(p => p.predicted_winner));
-    
-    if (uniquePredictions.size === 1) {
+    const correctGuessers = predictions.filter((p) => p.predicted_winner === actualVoteOut);
+    // House rule: if everyone picked the same person, nobody gets points
+    const everyoneSame = new Set(predictions.map((p) => p.predicted_winner)).size === 1;
+
+    if (everyoneSame) {
       toast({
         title: "No points awarded",
         description: "Everyone predicted the same person - no points awarded!",
       });
-      return;
-    }
+    } else {
+      const missed: string[] = [];
+      for (const prediction of correctGuessers) {
+        // Points go on one of the team's castaways: one still in (not the one going home tonight)
+        // if there is one, otherwise any castaway on the team, so a team with nobody left still
+        // gets its points
+        const owned = allContestants.filter((c) => c.owner === prediction.player_name);
+        const target =
+          owned.find((c) => !c.isEliminated && c.name !== actualVoteOut) ??
+          owned.find((c) => !c.isEliminated) ??
+          owned[0];
+        if (target) onScore(target.id, target.name, "Tribal Vote Correct", PREDICTION_POINTS);
+        else missed.push(prediction.player_name);
+      }
 
-    // Award 5 points to correct guessers
-    const correctGuessers = predictions.filter(p => p.predicted_winner === actualVoteOut);
-    
-    for (const prediction of correctGuessers) {
-      // Find the player's contestant to get their ID
-      const playerContestant = finalists.find(c => c.owner === prediction.player_name);
-      if (playerContestant) {
-        onScore(playerContestant.id, playerContestant.name, "Tribal Vote Correct", 5);
+      const awarded = correctGuessers.length - missed.length;
+      if (correctGuessers.length === 0) {
+        toast({
+          title: "No correct guesses",
+          description: "No one predicted the vote out correctly",
+        });
+      } else {
+        toast({
+          title: "Points awarded",
+          description:
+            `${awarded} player(s) guessed correctly and earned ${PREDICTION_POINTS} points` +
+            (missed.length ? `. No castaways to give points to for: ${missed.join(", ")}` : ""),
+        });
       }
     }
 
-    if (correctGuessers.length > 0) {
-      toast({
-        title: "Points awarded",
-        description: `${correctGuessers.length} player(s) guessed correctly and earned 5 points`,
-      });
-    } else {
-      toast({
-        title: "No correct guesses",
-        description: "No one predicted the vote out correctly",
-      });
+    // Always mark who went home, even when nobody scored. Skip it if they're already out
+    // (auto-scoring or a hand entry got there first) so they aren't voted out twice.
+    const votedOutContestant = allContestants.find((c) => c.name === actualVoteOut);
+    if (votedOutContestant && !votedOutContestant.isEliminated) {
+      onScore(votedOutContestant.id, votedOutContestant.name, "Voted Out 💀", votedOutPoints);
     }
 
-    // Mark the voted out contestant as eliminated
-    const votedOutContestant = finalists.find(c => c.name === actualVoteOut);
-    if (votedOutContestant) {
-      onScore(votedOutContestant.id, votedOutContestant.name, "Voted Out 💀", 0);
-    }
-
+    setActualVoteOut("");
     onOpenChange(false);
   };
 
@@ -258,7 +278,7 @@ export const FinalPredictionDialog = ({
         <DialogHeader>
           <DialogTitle>Final tribal council predictions</DialogTitle>
           <DialogDescription>
-            Each player predicts who will be voted out. Correct guessers get 5 points - unless everyone picks the same person!
+            Each player predicts who will be voted out. Correct guessers get {PREDICTION_POINTS} points - unless everyone picks the same person!
           </DialogDescription>
         </DialogHeader>
 
@@ -379,11 +399,14 @@ export const FinalPredictionDialog = ({
                       <SelectValue placeholder="Select contestant" />
                     </SelectTrigger>
                     <SelectContent>
-                      {finalists.map((contestant) => (
-                        <SelectItem key={contestant.id} value={contestant.name}>
-                          {contestant.name}
-                        </SelectItem>
-                      ))}
+                      {/* Still in first, then anyone already marked out (auto-scoring may have done it) */}
+                      {[...allContestants]
+                        .sort((a, b) => Number(a.isEliminated) - Number(b.isEliminated) || a.name.localeCompare(b.name))
+                        .map((contestant) => (
+                          <SelectItem key={contestant.id} value={contestant.name}>
+                            {contestant.isEliminated ? `${contestant.name} (already out)` : contestant.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <Button variant="accent" onClick={confirmVoteOut} disabled={!actualVoteOut} className="w-full">

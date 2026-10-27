@@ -654,6 +654,8 @@ export const GameMode = ({
           sessionId={sessionId}
           episode={episode}
           finalists={contestants.filter(c => !c.isEliminated)}
+          allContestants={contestants}
+          votedOutPoints={getPoints("VOTED_OUT", scoringConfig)}
           isAdmin={isAdmin}
           playerName={playerName}
           players={draftOrder}

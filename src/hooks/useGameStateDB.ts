@@ -299,6 +299,9 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     };
   }, []);
 
+  // Set after the live connection first connects, so later connects (after a drop) reload
+  const subscribedOnceRef = useRef(false);
+
   // Ids of this session's scoring events, so we can recognize their DELETE events.
   // (Supabase realtime can't apply a session_id filter to deletes; they only carry the row id.)
   const scoringEventIdsRef = useRef<Set<string>>(new Set());
@@ -350,10 +353,32 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
           if (id && scoringEventIdsRef.current.has(id)) debouncedReload();
         }
       )
-      .subscribe();
+      // The live connection drops when a phone sleeps (say, during the episode) and changes made
+      // meanwhile are never replayed. Reload whenever it reconnects so nothing is missed.
+      .subscribe((status) => {
+        if (status !== "SUBSCRIBED") return;
+        if (subscribedOnceRef.current) debouncedReload();
+        subscribedOnceRef.current = true;
+      });
 
     return () => {
+      subscribedOnceRef.current = false;
       supabase.removeChannel(channel);
+    };
+  }, [sessionId, debouncedReload]);
+
+  // Coming back to the app (phone unlocked, tab switched back): reload rather than trust a live
+  // connection that may have gone stale while the screen was off.
+  useEffect(() => {
+    if (!sessionId) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") debouncedReload();
+    };
+    window.addEventListener("focus", debouncedReload);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", debouncedReload);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [sessionId, debouncedReload]);
 
@@ -708,6 +733,10 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
         episode: state.episode,
       });
     }
+
+    // Show the change right away, even if the live connection has gone quiet. Without this a
+    // castaway marked out could still look "in" until the page was reloaded.
+    debouncedReload();
   };
 
   const undoLastEvent = async () => {
