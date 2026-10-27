@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Contestant, Player } from "@/types/survivor";
+import { Contestant, Player, ScoringEvent } from "@/types/survivor";
+import { confirmDialog } from "@/components/ConfirmHost";
 import { CheckCircle2, Circle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotify as useToast } from "@/lib/notify";
@@ -18,6 +19,10 @@ interface Prediction {
 // Correct" setting is used by most leagues for castaways who vote with the majority, not for
 // this game, so predictions get their own setting when they move to team bonuses.
 const PREDICTION_POINTS = 5;
+// The action this screen saves for a correct prediction (the hand-scoring tile adds a ✅)
+const PREDICTION_ACTION = "Tribal Vote Correct";
+const isExitAction = (action: string) =>
+  action.includes("Quit") || action.includes("Voted Out") || action.includes("Medevac");
 
 interface FinalPredictionDialogProps {
   open: boolean;
@@ -30,6 +35,8 @@ interface FinalPredictionDialogProps {
   allContestants: Contestant[];
   /** The league's points for Voted Out */
   votedOutPoints: number;
+  /** Scoring events already saved for this episode */
+  episodeEvents: ScoringEvent[];
   isAdmin: boolean;
   playerName: string | null;
   players: string[];
@@ -44,6 +51,7 @@ export const FinalPredictionDialog = ({
   finalists,
   allContestants,
   votedOutPoints,
+  episodeEvents,
   isAdmin,
   playerName,
   players,
@@ -54,6 +62,12 @@ export const FinalPredictionDialog = ({
   const [selectedWinner, setSelectedWinner] = useState("");
   const [actualVoteOut, setActualVoteOut] = useState("");
   const { toast } = useToast();
+
+  // Who's already marked out this episode, and whether this screen already gave points
+  const outThisEpisode = [
+    ...new Set(episodeEvents.filter((e) => isExitAction(e.action)).map((e) => e.contestantName)),
+  ];
+  const pointsAlreadyGiven = episodeEvents.some((e) => e.action === PREDICTION_ACTION);
 
   useEffect(() => {
     if (open) {
@@ -210,6 +224,20 @@ export const FinalPredictionDialog = ({
       return;
     }
 
+    // Confirming the same person twice would give everyone their points twice. A different
+    // person is fine (two Tribals in one episode).
+    if (outThisEpisode.includes(actualVoteOut) && pointsAlreadyGiven) {
+      const again = await confirmDialog({
+        title: `${actualVoteOut} is already marked out this episode`,
+        description:
+          "Prediction points were already given this episode. If you already confirmed " +
+          `${actualVoteOut}, doing it again gives everyone who got it right their points a second time.`,
+        confirmText: "Give points again",
+        cancelText: "Cancel",
+      });
+      if (!again) return;
+    }
+
     const correctGuessers = predictions.filter((p) => p.predicted_winner === actualVoteOut);
     // House rule: if everyone picked the same person, nobody gets points
     const everyoneSame = new Set(predictions.map((p) => p.predicted_winner)).size === 1;
@@ -230,7 +258,7 @@ export const FinalPredictionDialog = ({
           owned.find((c) => !c.isEliminated && c.name !== actualVoteOut) ??
           owned.find((c) => !c.isEliminated) ??
           owned[0];
-        if (target) onScore(target.id, target.name, "Tribal Vote Correct", PREDICTION_POINTS);
+        if (target) onScore(target.id, target.name, PREDICTION_ACTION, PREDICTION_POINTS);
         else missed.push(prediction.player_name);
       }
 
@@ -239,6 +267,12 @@ export const FinalPredictionDialog = ({
         toast({
           title: "No correct guesses",
           description: "No one predicted the vote out correctly",
+        });
+      } else if (awarded === 0) {
+        toast({
+          title: "No points given",
+          description: `No castaways to give points to for: ${missed.join(", ")}`,
+          variant: "destructive",
         });
       } else {
         toast({
@@ -385,7 +419,12 @@ export const FinalPredictionDialog = ({
                   {predictions.map((prediction) => (
                     <div key={prediction.id} className="glass flex min-h-[44px] items-center justify-between gap-3 rounded-[12px] px-3 py-2">
                       <span className="font-semibold">{prediction.player_name}</span>
-                      <span className="text-muted-foreground text-right">{prediction.predicted_winner}</span>
+                      <span className="flex items-center gap-1.5 text-right text-muted-foreground">
+                        {outThisEpisode.includes(prediction.predicted_winner) && (
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-label="Went home" />
+                        )}
+                        {prediction.predicted_winner}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -394,6 +433,12 @@ export const FinalPredictionDialog = ({
               {isAdmin && (
                 <div className="space-y-3 rounded-[12px] border-2 border-accent bg-accent/10 p-4">
                   <h3 className="font-extrabold">Who actually got voted out?</h3>
+                  {outThisEpisode.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Already marked out this episode: {outThisEpisode.join(", ")}.
+                      {pointsAlreadyGiven ? " Prediction points have been given." : ""}
+                    </p>
+                  )}
                   <Select value={actualVoteOut} onValueChange={setActualVoteOut}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select contestant" />
