@@ -23,6 +23,8 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
   const { leagueId } = options;
 
   const [leagueTeams, setLeagueTeams] = useState<LeagueTeam[]>([]);
+  const leagueTeamsRef = useRef<LeagueTeam[]>([]);
+  leagueTeamsRef.current = leagueTeams;
   const [state, setState] = useState<GameState>({
     mode: (localStorage.getItem(LOCAL_MODE_KEY) as GameState["mode"]) || "setup",
     season: 49,
@@ -43,6 +45,16 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
   // The session the screen is currently showing. Loads for any other session are ignored,
   // so a slow reload of last season can't overwrite the new one.
   const currentSidRef = useRef<string | null>(null);
+  // Each load gets a number. A load only updates the screen if no load that started after it has
+  // already done so, so an older, slower load can't land last and put back data from before a
+  // change (e.g. a castaway "still in"). A load that fails doesn't count, so the screen still
+  // takes the next good one.
+  const loadSeqRef = useRef(0);
+  const appliedSeqRef = useRef(0);
+  // Bumped to rebuild the live connection after the server closes it; attempts since the last
+  // good connection set how long to wait before the next try
+  const [channelRetry, setChannelRetry] = useState(0);
+  const channelAttemptsRef = useRef(0);
   const setSessionId = (sid: string | null) => {
     currentSidRef.current = sid;
     setSessionIdState(sid);
@@ -158,8 +170,12 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
 
   // Load game state from database
   const loadGameState = async (sid: string, teams?: LeagueTeam[]) => {
+    // A load for a season we've already switched away from would be thrown away anyway
+    if (currentSidRef.current && sid !== currentSidRef.current) return;
+    const seq = ++loadSeqRef.current;
     try {
-      const teamsToUse = teams || leagueTeams;
+      // Latest team list, not the one from when this season first loaded (team renames)
+      const teamsToUse = teams || leagueTeamsRef.current;
       
       const [sessionData, contestantsData, scoringData, draftData, cryingData, profilesData, archivedData] = await Promise.all([
         supabase.from("game_sessions").select("*").eq("id", sid).single(),
@@ -175,6 +191,14 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
 
       // Drop results for a session we've already switched away from
       if (currentSidRef.current && sid !== currentSidRef.current) return;
+      // Drop results if a load that started later has already updated the screen
+      if (seq <= appliedSeqRef.current) return;
+      // Don't replace good data with a failed read (flaky network)
+      if (sessionData.error || contestantsData.error || scoringData.error) {
+        console.error("Game state load failed:", sessionData.error || contestantsData.error || scoringData.error);
+        return;
+      }
+      appliedSeqRef.current = seq;
 
       const session = sessionData.data;
       const contestants = contestantsData.data || [];
@@ -299,6 +323,9 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
     };
   }, []);
 
+  // Set after the live connection first connects, so later connects (after a drop) reload
+  const subscribedOnceRef = useRef(false);
+
   // Ids of this session's scoring events, so we can recognize their DELETE events.
   // (Supabase realtime can't apply a session_id filter to deletes; they only carry the row id.)
   const scoringEventIdsRef = useRef<Set<string>>(new Set());
@@ -309,6 +336,8 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
   // Set up realtime subscriptions
   useEffect(() => {
     if (!sessionId) return;
+    let closing = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     const channel = supabase
       .channel(`game-state-${sessionId}`)
@@ -350,10 +379,53 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
           if (id && scoringEventIdsRef.current.has(id)) debouncedReload();
         }
       )
-      .subscribe();
+      // The live connection drops when a phone sleeps (say, during the episode) and changes made
+      // meanwhile are never replayed. Reload whenever it reconnects so nothing is missed. If the
+      // server closes the channel or it errors, it doesn't come back on its own, so rebuild it.
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          channelAttemptsRef.current = 0;
+          if (retryTimer) {
+            clearTimeout(retryTimer);
+            retryTimer = null;
+          }
+          if (subscribedOnceRef.current) debouncedReload();
+          subscribedOnceRef.current = true;
+          return;
+        }
+        // Errors and timeouts rejoin on their own. A channel the server closes doesn't, so rebuild
+        // it, waiting longer each time (5s, 15s, then every minute) so a bad network isn't hammered.
+        if (closing || status !== "CLOSED") return;
+        if (retryTimer) clearTimeout(retryTimer);
+        const delay = [5000, 15000, 60000][Math.min(channelAttemptsRef.current, 2)];
+        channelAttemptsRef.current += 1;
+        retryTimer = setTimeout(() => setChannelRetry((n) => n + 1), delay);
+      });
 
     return () => {
+      closing = true;
+      if (retryTimer) clearTimeout(retryTimer);
       supabase.removeChannel(channel);
+    };
+  }, [sessionId, debouncedReload, channelRetry]);
+
+  // A new season (session) starts fresh: its first connect isn't a reconnect
+  useEffect(() => {
+    subscribedOnceRef.current = false;
+  }, [sessionId]);
+
+  // Coming back to the app (phone unlocked, tab switched back): reload rather than trust a live
+  // connection that may have gone stale while the screen was off.
+  useEffect(() => {
+    if (!sessionId) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") debouncedReload();
+    };
+    window.addEventListener("focus", debouncedReload);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", debouncedReload);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [sessionId, debouncedReload]);
 
@@ -708,7 +780,16 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
         episode: state.episode,
       });
     }
+
+    // Show the change right away, even if the live connection has gone quiet. Without this a
+    // castaway marked out could still look "in" until the page was reloaded.
+    debouncedReload();
   };
+
+  const isExitAction = (action: string) =>
+    action.includes("Quit") || action.includes("Voted Out") || action.includes("Medevac");
+  const hasOtherExit = (eventId: string, contestantId: string) =>
+    state.scoringEvents.some((e) => e.id !== eventId && e.contestantId === contestantId && isExitAction(e.action));
 
   const undoLastEvent = async () => {
     if (!sessionId || state.scoringEvents.length === 0) return;
@@ -726,8 +807,9 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
         .eq("episode", state.episode);
     }
 
-    // If the event was elimination, un-eliminate the contestant
-    if (lastEvent.action.includes("Quit") || lastEvent.action.includes("Voted Out") || lastEvent.action.includes("Medevac")) {
+    // If the event was elimination, un-eliminate the contestant (unless another exit, e.g. a
+    // duplicate "Voted Out", still says they're out)
+    if (isExitAction(lastEvent.action) && !hasOtherExit(lastEvent.id, lastEvent.contestantId)) {
       await supabase.from("contestants")
         .update({ is_eliminated: false })
         .eq("id", lastEvent.contestantId);
@@ -754,8 +836,9 @@ export const useGameStateDB = (options: UseGameStateDBOptions = {}) => {
         .eq("episode", event.episode);
     }
 
-    // If the event was elimination, un-eliminate the contestant
-    if (event.action.includes("Quit") || event.action.includes("Voted Out") || event.action.includes("Medevac")) {
+    // If the event was elimination, un-eliminate the contestant (unless another exit, e.g. a
+    // duplicate "Voted Out", still says they're out)
+    if (isExitAction(event.action) && !hasOtherExit(event.id, event.contestantId)) {
       await supabase.from("contestants")
         .update({ is_eliminated: false })
         .eq("id", event.contestantId);
