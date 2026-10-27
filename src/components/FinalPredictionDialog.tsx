@@ -224,21 +224,35 @@ export const FinalPredictionDialog = ({
       return;
     }
 
-    // Confirming the same person twice would give everyone their points twice. A different
-    // person is fine (two Tribals in one episode).
-    if (outThisEpisode.includes(actualVoteOut) && pointsAlreadyGiven) {
+    const correctGuessers = predictions.filter((p) => p.predicted_winner === actualVoteOut);
+
+    // Confirming the same person twice would give everyone their points twice. Each player has
+    // one prediction per episode, so if anyone who got this one right already has prediction
+    // points this episode, this boot was already confirmed. Checked against the database too, in
+    // case the screen hasn't caught up with a confirm made seconds ago.
+    const ownerOf = new Map(allContestants.map((c) => [c.id, c.owner]));
+    const alreadyPaidIds = new Set(episodeEvents.filter((e) => e.action === PREDICTION_ACTION).map((e) => e.contestantId));
+    const { data: paidRows, error: paidError } = await supabase
+      .from("scoring_events")
+      .select("contestant_id")
+      .eq("session_id", sessionId)
+      .eq("episode", episode)
+      .eq("action", PREDICTION_ACTION);
+    if (!paidError) for (const r of paidRows || []) alreadyPaidIds.add(r.contestant_id);
+    const alreadyPaidTeams = new Set([...alreadyPaidIds].map((id) => ownerOf.get(id)).filter(Boolean));
+    const repaid = correctGuessers.filter((p) => alreadyPaidTeams.has(p.player_name)).map((p) => p.player_name);
+    if (repaid.length > 0) {
       const again = await confirmDialog({
-        title: `${actualVoteOut} is already marked out this episode`,
+        title: `Points for ${actualVoteOut} were already given`,
         description:
-          "Prediction points were already given this episode. If you already confirmed " +
-          `${actualVoteOut}, doing it again gives everyone who got it right their points a second time.`,
+          `${repaid.join(", ")} already got prediction points this episode for picking ${actualVoteOut}. ` +
+          "Confirming again gives them a second time.",
         confirmText: "Give points again",
         cancelText: "Cancel",
       });
       if (!again) return;
     }
 
-    const correctGuessers = predictions.filter((p) => p.predicted_winner === actualVoteOut);
     // House rule: if everyone picked the same person, nobody gets points
     const everyoneSame = new Set(predictions.map((p) => p.predicted_winner)).size === 1;
 
