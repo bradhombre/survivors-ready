@@ -45,6 +45,8 @@ export default function Auth() {
     setIsLoading(true);
     try {
       await resetPassword(email);
+    } catch {
+      // Keep the same response and never disclose whether an account exists.
     } finally {
       setResetSent(true);
       setIsLoading(false);
