@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Leagues from "./pages/Leagues";
 import LeagueDashboard from "./pages/LeagueDashboard";
 import Admin from "./pages/Admin";
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/leagues" element={<Leagues />} />
           <Route path="/league/:id" element={<LeagueDashboard />} />
           <Route path="/join/:code" element={<JoinByLink />} />

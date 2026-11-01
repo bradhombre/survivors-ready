@@ -21,16 +21,37 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { user, signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [isForgotPassword, setIsForgotPassword] = useState(searchParams.get('forgotPassword') === 'true');
+  const [resetSent, setResetSent] = useState(false);
   const returnTo = searchParams.get('returnTo');
 
   useEffect(() => {
-    if (user) {
+    if (user && !isForgotPassword) {
       navigate(returnTo || '/leagues');
     }
-  }, [user, navigate, returnTo]);
+  }, [user, navigate, returnTo, isForgotPassword]);
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      authSchema.shape.email.parse(email);
+    } catch (err) {
+      if (err instanceof z.ZodError) toast.error(err.errors[0].message);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await resetPassword(email);
+    } catch {
+      // Keep the same response and never disclose whether an account exists.
+    } finally {
+      setResetSent(true);
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,14 +118,24 @@ export default function Auth() {
       <div className="flex flex-1 flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-3xl">{isLogin ? "Come on in" : "Join the tribe"}</CardTitle>
+          <CardTitle className="text-3xl">{isForgotPassword ? 'Reset your password' : isLogin ? "Come on in" : "Join the tribe"}</CardTitle>
           <CardDescription>
-            {isLogin
+            {isForgotPassword ? 'Request a link to reset your password.' : isLogin
               ? 'Sign in to Survivors Ready'
               : 'Create your Survivors Ready account'}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {isForgotPassword ? <>
+            {resetSent ? <p role="status" className="text-sm text-muted-foreground">If an account exists for that email, we've sent a reset link. Check your inbox and spam folder.</p> : <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input id="reset-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Sending…' : 'Send reset link'}</Button>
+            </form>}
+            <div className="mt-4 text-center text-sm"><Button variant="link" className="h-auto p-0 text-sm font-normal" onClick={() => { setIsForgotPassword(false); setIsLogin(true); setResetSent(false); }}>Back to sign in</Button></div>
+          </> : <>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -127,6 +158,7 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              {isLogin && <Button type="button" variant="link" className="h-auto p-0 text-sm font-normal" onClick={() => { setResetSent(false); setIsForgotPassword(true); }}>Forgot password?</Button>}
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Loading…' : isLogin ? 'Sign in' : 'Sign up'}
@@ -178,6 +210,7 @@ export default function Auth() {
                 : 'Already have an account? Sign in'}
             </button>
           </div>
+          </>}
         </CardContent>
       </Card>
       </div>

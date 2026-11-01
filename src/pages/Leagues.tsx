@@ -6,7 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Users, LogOut, Crown, Shield, User, Settings, Trophy, Target, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Users, LogOut, Crown, Shield, User, Settings, Trophy, Target, Trash2, MoreVertical, KeyRound } from 'lucide-react';
+import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,7 @@ export default function Leagues() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteLeagueOpen, setDeleteLeagueOpen] = useState(false);
@@ -265,11 +267,15 @@ export default function Leagues() {
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" aria-label="Account options">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
+                  <KeyRound className="h-4 w-4 mr-2" />
+                  Change password
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign out
@@ -421,6 +427,7 @@ export default function Leagues() {
         )}
       </main>
 
+      <ChangePasswordDialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen} user={user} />
       <AlertDialog open={deleteLeagueOpen} onOpenChange={setDeleteLeagueOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
