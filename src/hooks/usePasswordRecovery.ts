@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { isRecoverySessionValid } from '@/lib/passwordRecovery';
+import { isRecoveryLink, isRecoverySessionValid } from '@/lib/passwordRecovery';
 
 // Capture the link before Auth consumes and clears its hash, and register early
 // so PASSWORD_RECOVERY cannot be missed while the route mounts.
 const incomingHash = new URLSearchParams(window.location.hash.slice(1));
 const incomingQuery = new URLSearchParams(window.location.search);
 const hasUrlError = incomingHash.has('error') || incomingHash.has('error_code') || incomingQuery.has('error') || incomingQuery.has('error_code');
-let recoveryToken = incomingHash.get('type') === 'recovery' ? incomingHash.get('access_token') : null;
+// Set once at page load. If the link lands on another page (e.g. the redirect allow-list sent it home), App sends it to /reset-password.
+export const arrivedWithRecoveryLink = isRecoveryLink(window.location.hash);
+let recoveryToken = arrivedWithRecoveryLink ? incomingHash.get('access_token') : null;
 supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'PASSWORD_RECOVERY') recoveryToken = session?.access_token ?? null;
   if (event === 'TOKEN_REFRESHED' && recoveryToken) recoveryToken = session?.access_token ?? null;

@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Lockup } from "@/components/Lockup";
+import { resetRequestErrorMessage } from "@/lib/passwordRecovery";
 
 const authSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -44,11 +45,15 @@ export default function Auth() {
     }
     setIsLoading(true);
     try {
-      await resetPassword(email);
+      // Supabase answers the same way whether or not the account exists, so showing
+      // a send error (like "wait a minute") can't reveal who has an account.
+      const { error } = await resetPassword(email);
+      const message = resetRequestErrorMessage(error);
+      if (message) toast.error(message);
+      else setResetSent(true);
     } catch {
-      // Keep the same response and never disclose whether an account exists.
+      toast.error(resetRequestErrorMessage({}));
     } finally {
-      setResetSent(true);
       setIsLoading(false);
     }
   };

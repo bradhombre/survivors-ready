@@ -13,6 +13,7 @@ import JoinByLink from "./pages/JoinByLink";
 import NotFound from "./pages/NotFound";
 import { AppFooter } from "./components/AppFooter";
 import { BugResponseBanner } from "./components/BugResponseBanner";
+import { RecoveryLinkRedirect } from "./components/RecoveryLinkRedirect";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
       <Sonner />
       <ConfirmHost />
       <BrowserRouter>
+        <RecoveryLinkRedirect />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
