@@ -74,6 +74,13 @@ export default function Auth() {
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           toast.error('Invalid email or password');
+        } else if (isLogin && error.message.includes('Email not confirmed')) {
+          // Their password checked out but they never tapped the confirmation link: send a fresh one
+          // (the server allows at most one a minute) and tell them where to look.
+          const { error: resendError } = await signUp(email, password, returnTo);
+          toast.info(resendError
+            ? "Your email isn't confirmed yet. Tap the link in the confirmation email we sent you."
+            : "Your email isn't confirmed yet. We just sent you a new link. Tap it to finish signing in.");
         } else if (error.message.includes('User already registered')) {
           toast.error('This email is already registered');
         } else {
