@@ -100,14 +100,31 @@ export function useAuth() {
     return { error };
   };
 
-  const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
+  const signUp = async (email: string, password: string, returnTo?: string | null) => {
+    // After confirming, land back on the invite link they came from (if any), else the home page.
+    const redirectPath = returnTo && /^\/join\/[A-Za-z0-9_-]{1,40}$/.test(returnTo) ? returnTo : '/';
+
+    // The confirmation email normally goes out through Customer.io (email-sign-up function).
+    // A clear "no" from it (bad input, too many attempts) is shown as is. If the function can't run
+    // (not deployed yet, busy, server or Customer.io trouble), fall back to the login system's own
+    // sign-up and email so nobody is ever stuck.
+    try {
+      const { error } = await supabase.functions.invoke('email-sign-up', { body: { email, password, redirectPath } });
+      if (!error) return { error: null };
+      const response = (error as { context?: unknown }).context;
+      if (response instanceof Response && (response.status === 400 || response.status === 429)) {
+        const body = await response.json().catch(() => null);
+        return { error: new Error(body?.message ?? 'We could not create your account. Please try again.') };
+      }
+    } catch {
+      // fall through to the built-in sign-up
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl
+        emailRedirectTo: `${window.location.origin}${redirectPath}`
       }
     });
     return { error };

@@ -69,7 +69,7 @@ export default function Auth() {
 
       const { error } = isLogin
         ? await signIn(email, password)
-        : await signUp(email, password);
+        : await signUp(email, password, returnTo);
 
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
