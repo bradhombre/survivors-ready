@@ -126,6 +126,15 @@ export function useAuth() {
   };
 
   const resetPassword = async (email: string) => {
+    // The reset email normally goes out through Customer.io (send-password-reset function).
+    // If that can't run (not deployed yet, server or Customer.io trouble), fall back to the
+    // login system's built-in email so a reset request never just disappears.
+    try {
+      const { error } = await supabase.functions.invoke('send-password-reset', { body: { email } });
+      if (!error) return { error: null };
+    } catch {
+      // fall through to the built-in email
+    }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
