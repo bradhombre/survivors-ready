@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Button } from '@/components/ui/button';
 import { Search, ShieldAlert, Trash2, UserPlus, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
@@ -182,8 +183,8 @@ export function UserManager() {
         <CardContent>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
             <Input placeholder="Email" aria-label="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-            <Input
-              type="password"
+            <PasswordInput
+              autoComplete="new-password"
               placeholder="Password"
               aria-label="Password"
               value={newPassword}

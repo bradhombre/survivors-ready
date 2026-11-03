@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { newPasswordSchema } from '@/lib/passwordRecovery';
 
@@ -35,15 +35,15 @@ export function PasswordForm({ onSubmit, signedIn = false, requiresCurrentPasswo
     <form onSubmit={submit} className="space-y-4">
       {signedIn && <div className="space-y-2">
         <Label htmlFor="current-password">Current password{!requiresCurrentPassword && ' (if you have one)'}</Label>
-        <Input id="current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required={requiresCurrentPassword} />
+        <PasswordInput id="current-password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required={requiresCurrentPassword} />
       </div>}
       <div className="space-y-2">
         <Label htmlFor="new-password">New password</Label>
-        <Input id="new-password" type="password" autoComplete="new-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+        <PasswordInput id="new-password" autoComplete="new-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirm-password">Confirm new password</Label>
-        <Input id="confirm-password" type="password" autoComplete="new-password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
+        <PasswordInput id="confirm-password" autoComplete="new-password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
       </div>
       <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Saving…' : 'Change password'}</Button>
     </form>
